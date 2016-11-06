@@ -8,3 +8,5 @@ MStatus initializePlugin(MObject& obj)
 
 	return MS::kSuccess;
 }
+
+//test
