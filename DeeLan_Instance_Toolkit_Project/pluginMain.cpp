@@ -26,3 +26,4 @@ MStatus uninitializePlugin(MObject& obj)
 	return MS::kSuccess;
 }
 
+//this is a quick comment to test merging in Github
