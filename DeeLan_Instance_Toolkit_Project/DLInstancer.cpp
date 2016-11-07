@@ -193,6 +193,20 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 {
 	MStatus status;
 
+	if (plug != aOutMesh)
+	{
+		return MS::kUnknownParameter;
+	}
+
+	//JUST TESTING
+	if (attributeDirty_[kInstanceMesh] == true || instanceMeshData_.initialized == false)
+	{
+		MObject instanceMesh = data.inputValue(DLInstancer::aInstanceMesh, &status).asMesh();
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+		MFnMesh fnInstMesh(instanceMesh, &status);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+	}
+	
 
 
 	return MS::kSuccess;

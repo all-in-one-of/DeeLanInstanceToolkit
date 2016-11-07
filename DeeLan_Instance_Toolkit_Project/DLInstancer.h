@@ -11,11 +11,13 @@
 #include <maya/MIntArray.h>
 #include <maya/MFloatArray.h>
 #include <maya/MMatrixArray.h>
+#include <maya/MFnMesh.h>
 
 #include <map>
 
 struct DLMeshData
 {
+	bool initialized;
 	unsigned int numPoints;
 	unsigned int numPolys;
 	MPointArray pointArray;
@@ -44,6 +46,8 @@ public:
 	/// <param name="plug">Plug to be recalculated.</param> 
 	/// <param name="data">Rhe data block.</param> 
 	virtual MStatus compute(const MPlug &plug, MDataBlock &data);
+
+	MStatus getMeshData();
 
 
 	enum attrs
