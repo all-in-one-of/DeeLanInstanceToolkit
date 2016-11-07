@@ -19,7 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DLInstancer.cpp" />
     <ClCompile Include="pluginMain.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="DLInstancer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{b817d839-151d-496c-8442-0b9d5e615edb}</ProjectGuid>
