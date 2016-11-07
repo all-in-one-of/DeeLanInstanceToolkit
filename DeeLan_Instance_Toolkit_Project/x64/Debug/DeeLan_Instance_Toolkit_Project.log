@@ -1,3 +1,0 @@
-﻿  pluginMain.cpp
-LINK : error LNK2001: unresolved external symbol uninitializePlugin
-D:\DeeLanInstanceToolkit\DeeLan_Instance_Toolkit_Project\x64\Debug\DeeLan_Instance_Toolkit_Project.lib : fatal error LNK1120: 1 unresolved externals
