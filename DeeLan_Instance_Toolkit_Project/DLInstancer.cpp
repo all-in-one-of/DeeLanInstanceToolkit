@@ -21,7 +21,7 @@ MObject DLInstancer::aInstanceGroup;
 MObject DLInstancer::aInstanceGroupMesh;
 MObject DLInstancer::aInstanceGroupMatricies;
 
-DLInstancer::DLInstancer()
+DLInstancer::DLInstancer() 
 {
 }
 
@@ -42,8 +42,6 @@ MStatus DLInstancer::initialize()
 	MFnTypedAttribute tAttr;
 	MFnCompoundAttribute cAttr;
 	MFnMatrixAttribute mAttr;
-
-
 
 	//Input Attributes
 	aInstanceMesh = tAttr.create("instanceMesh", "iMesh", MFnData::kMesh);
@@ -124,6 +122,7 @@ MStatus DLInstancer::initialize()
 	attributeAffects(aRotationRandom, aOutMesh);
 	attributeAffects(aScaleRandom, aOutMesh);
 
+	/*
 	attributeAffects(aInstanceMesh, aInstanceGroupMesh);
 	attributeAffects(aReferenceMesh, aInstanceGroupMatricies);
 	attributeAffects(aNormalOffset, aInstanceGroupMatricies);
@@ -134,8 +133,66 @@ MStatus DLInstancer::initialize()
 	attributeAffects(aTranslateRandom, aInstanceGroupMatricies);
 	attributeAffects(aRotationRandom, aInstanceGroupMatricies);
 	attributeAffects(aScaleRandom, aInstanceGroupMatricies);
+	*/
 
 	
+
+
+	return MS::kSuccess;
+}
+
+MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray)
+{
+	MStatus status;
+
+	if (plug == aInstanceMesh)
+	{
+		attributeDirty_[kInstanceMesh] = true;
+	}
+	else if (plug == aReferenceMesh)
+	{
+		attributeDirty_[kReferenceMesh] = true;
+	}
+	else if (plug == aNormalOffset)
+	{
+		attributeDirty_[kNormalOffset] = true;
+	}
+	else if (plug == aTranslateOffset)
+	{
+		attributeDirty_[kTranslateOffset] = true;
+	}
+	else if (plug == aRotationOffset)
+	{
+		attributeDirty_[kRotationOffset] = true;
+	}
+	else if (plug == aScaleOffset)
+	{
+		attributeDirty_[kScaleOffset] = true;
+	}
+	else if (plug == aNormalRandom)
+	{
+		attributeDirty_[kNormalRandom] = true;
+	}
+	else if (plug == aTranslateRandom)
+	{
+		attributeDirty_[kTranslateRandom] = true;
+	}
+	else if (plug == aRotationRandom)
+	{
+		attributeDirty_[kRotationRandom] = true;
+	}
+	else if (plug == aScaleRandom)
+	{
+		attributeDirty_[kScaleRandom] = true;
+	}
+
+	return MS::kSuccess;
+}
+
+MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
+{
+	MStatus status;
+
 
 
 	return MS::kSuccess;
