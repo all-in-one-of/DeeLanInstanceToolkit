@@ -199,15 +199,84 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 	}
 
 	//JUST TESTING
-	if (attributeDirty_[kInstanceMesh] == true || instanceMeshData_.initialized == false)
+	if (attributeDirty_[kInstanceMesh] == true)
 	{
 		MObject instanceMesh = data.inputValue(DLInstancer::aInstanceMesh, &status).asMesh();
 		CHECK_MSTATUS_AND_RETURN_IT(status);
-		MFnMesh fnInstMesh(instanceMesh, &status);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+		status = dlGetMeshData(instanceMesh, inputInstanceMeshData_);
+
+		MDataHandle output = data.outputValue(aOutMesh);
+		output.set(instanceMesh);
+		data.setClean(plug);
 	}
 	
 
 
 	return MS::kSuccess;
 }
+
+MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
+{
+	MStatus status;
+
+	meshData.pointArray.clear();
+	meshData.polyCounts.clear();
+	meshData.polyConnects.clear();
+	meshData.uArray.clear();
+	meshData.vArray.clear();
+	meshData.uvIDs.clear();
+	meshData.uvCounts.clear();
+
+
+	MFnMesh fnMesh(mesh, &status);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+	MItMeshPolygon itPoly(mesh, &status);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+	MItMeshFaceVertex itFaceVert(mesh, &status);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+
+	meshData.numPoints = fnMesh.numVertices();
+	meshData.numPolys = fnMesh.numPolygons();
+	status = fnMesh.getPoints(meshData.pointArray, MSpace::kWorld);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+	status = fnMesh.getUVs(meshData.uArray, meshData.vArray);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+
+	for (; !itPoly.isDone(); itPoly.next())
+	{
+		int numVerts = itPoly.polygonVertexCount(&status);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+		meshData.polyCounts.append(numVerts);
+
+		MIntArray vertIDs;
+		status = itPoly.getVertices(vertIDs);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+		for (int i = 0; i < vertIDs.length(); ++i)
+		{
+			meshData.polyConnects.append(vertIDs[i]);
+		}
+
+		MFloatArray tempUV;
+		status = itPoly.getUVs(tempUV, tempUV);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+		meshData.uvCounts.append( tempUV.length() );
+
+	}
+
+	for (; !itFaceVert.isDone(); itFaceVert.next())
+	{
+		int uvID;
+		status = itFaceVert.getUVIndex(uvID);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+		meshData.uvIDs.append(uvID);
+	}
+
+
+	return MS::kSuccess;
+}
+
+
+
+

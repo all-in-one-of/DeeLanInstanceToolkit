@@ -9,11 +9,14 @@
 #include <maya/MPointArray.h>
 #include <maya/MPoint.h>
 #include <maya/MIntArray.h>
+#include <maya/MItMeshPolygon.h>
+#include <maya/MItMeshFaceVertex.h>
 #include <maya/MFloatArray.h>
 #include <maya/MMatrixArray.h>
 #include <maya/MFnMesh.h>
 
 #include <map>
+#include <vector>
 
 struct DLMeshData
 {
@@ -27,6 +30,24 @@ struct DLMeshData
 	MFloatArray vArray;
 	MIntArray uvIDs;
 	MIntArray uvCounts;
+};
+
+struct DLTransformData
+{
+	bool initialized;
+	MPointArray referencePoints;
+	std::vector<float3> normals;
+	std::vector<float3> normalRotations;
+	float normalOffset;
+	float3 translateOffset;
+	float3 rotationOffset;
+	float3 scaleOffset;
+	float normalRandom;
+	float3 translateRandom;
+	float3 rotationRandom;
+	float3 scaleRandom;
+
+
 };
 
 
@@ -47,7 +68,21 @@ public:
 	/// <param name="data">Rhe data block.</param> 
 	virtual MStatus compute(const MPlug &plug, MDataBlock &data);
 
-	MStatus getMeshData();
+	MStatus dlGetMeshData(const MObject& mesh, DLMeshData& meshData);
+
+	MStatus dlAppendMeshData(const DLMeshData& inMeshData, int numCopies,
+								DLMeshData& outMeshData, bool clearData = true);
+
+	MObject dlCreateMesh(const DLMeshData& meshData);
+
+	MStatus dlCalculateVectorAngles(float3 base, float3 direction, float3& angles);
+
+	MStatus dlGenerateRandomValues(float3 maxDifference, float3& values);
+
+	MMatrixArray dlGenerateMatricies(const DLTransformData& transformData);
+
+	MStatus dlDeformMesh(MObject& mesh, MMatrixArray& matricies);
+
 
 
 	enum attrs
@@ -77,8 +112,11 @@ public:
 	static MObject aInstanceGroupMatricies;
 
 private:
-	DLMeshData instanceMeshData_;
-	MMatrixArray referenceMatricies_;
+	DLMeshData inputInstanceMeshData_;
+	DLMeshData outputInstanceMeshData_;
+	DLTransformData transformData_;
+	MMatrixArray ouputTransformMatricies_;
+	MMatrixArray previousTransformMatricies_;
 	unsigned int numInstances_;
 	std::map<attrs, bool> attributeDirty_;
 };
