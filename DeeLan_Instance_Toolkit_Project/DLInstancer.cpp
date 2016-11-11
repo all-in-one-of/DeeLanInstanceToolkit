@@ -191,6 +191,7 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 
 MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 {
+	MGlobal::displayInfo("COMPUTE CALLED!!!");
 	MStatus status;
 
 	if (plug != aOutMesh)
@@ -198,18 +199,39 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 		return MS::kUnknownParameter;
 	}
 
-	//JUST TESTING
-	if (attributeDirty_[kInstanceMesh] == true)
-	{
-		MObject instanceMesh = data.inputValue(DLInstancer::aInstanceMesh, &status).asMesh();
-		CHECK_MSTATUS_AND_RETURN_IT(status);
+	MPlug iterPlug = plug;
 
-		status = dlGetMeshData(instanceMesh, inputInstanceMeshData_);
+	MItDependencyGraph itDG(iterPlug);
+	itDG.next();
 
-		MDataHandle output = data.outputValue(aOutMesh);
-		output.set(instanceMesh);
-		data.setClean(plug);
-	}
+	MObject parentNode = itDG.thisPlug().node();
+
+	MGlobal::displayInfo(itDG.thisPlug().name());
+
+
+
+	
+	MObject instanceMesh = data.inputValue(DLInstancer::aInstanceMesh, &status).asMesh();
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+
+	status = dlGetMeshData(instanceMesh, inputInstanceMeshData_);
+
+	MFnMeshData  dataFn;
+	MObject dataWrapper = dataFn.create();
+	MFnMesh generator;
+	MObject outMesh = generator.create(inputInstanceMeshData_.numPoints, inputInstanceMeshData_.numPolys,
+		inputInstanceMeshData_.pointArray, inputInstanceMeshData_.polyCounts, inputInstanceMeshData_.polyConnects,
+		inputInstanceMeshData_.uArray, inputInstanceMeshData_.vArray, dataWrapper, &status);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+	status = generator.setNormals(inputInstanceMeshData_.normals);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+
+
+
+	MDataHandle output = data.outputValue(aOutMesh);
+	output.set(dataWrapper);
+	data.setClean(plug);
+	
 	
 
 
@@ -240,6 +262,11 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 	meshData.numPolys = fnMesh.numPolygons();
 	status = fnMesh.getPoints(meshData.pointArray, MSpace::kWorld);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
+
+	//SORT OUT NORMALS
+	status = fnMesh.getNormals(meshData.normals, MSpace::kWorld);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+
 	status = fnMesh.getUVs(meshData.uArray, meshData.vArray);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
@@ -277,6 +304,36 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 	return MS::kSuccess;
 }
 
+MStatus DLInstancer::dlCreateOutputMeshData(const DLMeshData & inMeshData, unsigned int numCopies, DLMeshData & outMeshData, bool clearData)
+{
+	MStatus status;
 
+	if (clearData)
+	{
+		outMeshData.pointArray.clear();
+		outMeshData.polyCounts.clear();
+		outMeshData.polyConnects.clear();
+		outMeshData.uArray.clear();
+		outMeshData.vArray.clear();
+		outMeshData.uvIDs.clear();
+		outMeshData.uvCounts.clear();
+	}
+
+	outMeshData.numPoints = inMeshData.numPoints * numCopies;
+	outMeshData.numPolys = inMeshData.numPolys * numCopies;
+
+	for (unsigned int i = 0; i < numCopies; ++i)
+	{
+		outMeshData.appendArrayData(inMeshData);
+	}
+
+	return MS::kSuccess;
+}
+
+MObject DLInstancer::dlCreateMesh(const DLMeshData & meshData)
+{
+
+	return MObject();
+}
 
 

@@ -19,10 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DLCustomDataTypes.cpp" />
     <ClCompile Include="DLInstancer.cpp" />
     <ClCompile Include="pluginMain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DLCustomDataTypes.h" />
     <ClInclude Include="DLInstancer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -11,45 +11,17 @@
 #include <maya/MIntArray.h>
 #include <maya/MItMeshPolygon.h>
 #include <maya/MItMeshFaceVertex.h>
+#include <maya/MItDependencyGraph.h>
 #include <maya/MFloatArray.h>
 #include <maya/MMatrixArray.h>
 #include <maya/MFnMesh.h>
+#include <maya/MFnMeshData.h>
+#include <maya/MGlobal.h>
 
 #include <map>
 #include <vector>
 
-struct DLMeshData
-{
-	bool initialized;
-	unsigned int numPoints;
-	unsigned int numPolys;
-	MPointArray pointArray;
-	MIntArray polyCounts;
-	MIntArray polyConnects;
-	MFloatArray uArray;
-	MFloatArray vArray;
-	MIntArray uvIDs;
-	MIntArray uvCounts;
-};
-
-struct DLTransformData
-{
-	bool initialized;
-	MPointArray referencePoints;
-	std::vector<float3> normals;
-	std::vector<float3> normalRotations;
-	float normalOffset;
-	float3 translateOffset;
-	float3 rotationOffset;
-	float3 scaleOffset;
-	float normalRandom;
-	float3 translateRandom;
-	float3 rotationRandom;
-	float3 scaleRandom;
-
-
-};
-
+#include "DLCustomDataTypes.h"
 
 
 class DLInstancer : public MPxNode
@@ -70,7 +42,7 @@ public:
 
 	MStatus dlGetMeshData(const MObject& mesh, DLMeshData& meshData);
 
-	MStatus dlAppendMeshData(const DLMeshData& inMeshData, int numCopies,
+	MStatus dlCreateOutputMeshData(const DLMeshData& inMeshData, unsigned int numCopies,
 								DLMeshData& outMeshData, bool clearData = true);
 
 	MObject dlCreateMesh(const DLMeshData& meshData);
@@ -82,7 +54,6 @@ public:
 	MMatrixArray dlGenerateMatricies(const DLTransformData& transformData);
 
 	MStatus dlDeformMesh(MObject& mesh, MMatrixArray& matricies);
-
 
 
 	enum attrs
@@ -120,3 +91,4 @@ private:
 	unsigned int numInstances_;
 	std::map<attrs, bool> attributeDirty_;
 };
+
