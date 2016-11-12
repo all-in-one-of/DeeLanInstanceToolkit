@@ -24,12 +24,18 @@
     <ClCompile Include="DLCustomDataTypes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DLCommon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DLInstancer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DLCustomDataTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DLCommon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

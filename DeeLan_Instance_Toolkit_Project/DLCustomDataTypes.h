@@ -32,16 +32,16 @@ struct DLTransformData
 {
 	bool initialized;
 	MPointArray referencePoints;
-	std::vector<float3> normals;
-	std::vector<float3> normalRotations;
+	MFloatVectorArray referenceNormals;
+	MFloatVectorArray normalRotations;
 	float normalOffset;
 	float3 translateOffset;
 	float3 rotationOffset;
 	float3 scaleOffset;
-	float normalRandom;
-	float3 translateRandom;
-	float3 rotationRandom;
-	float3 scaleRandom;
+	std::vector<float> normalRandom;
+	std::vector<float3> translateRandom;
+	std::vector<float3> rotationRandom;
+	std::vector<float3> scaleRandom;
 
 
 };

@@ -13,6 +13,10 @@ void DLMeshData::appendArrayData(const DLMeshData& dataToAppend)
 	unsigned int uvIDsLen = dataToAppend.uvIDs.length();
 	unsigned int uvCountsLen = dataToAppend.uvCounts.length();
 
+	unsigned int currentNumPoints = pointArray.length();
+
+
+
 	for (unsigned int p = 0; p < ptAryLen; ++p)
 	{
 		pointArray.append(dataToAppend.pointArray[p]);
@@ -25,7 +29,7 @@ void DLMeshData::appendArrayData(const DLMeshData& dataToAppend)
 
 	for (unsigned int p = 0; p < polyConnectsLen; ++p)
 	{
-		polyConnects.append(dataToAppend.polyConnects[p]);
+		polyConnects.append(dataToAppend.polyConnects[p] + currentNumPoints);
 	}
 
 	for (unsigned int p = 0; p < uAryLen; ++p)

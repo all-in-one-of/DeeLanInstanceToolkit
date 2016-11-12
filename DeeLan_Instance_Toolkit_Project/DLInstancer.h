@@ -12,16 +12,19 @@
 #include <maya/MItMeshPolygon.h>
 #include <maya/MItMeshFaceVertex.h>
 #include <maya/MItDependencyGraph.h>
+#include <maya/MItGeometry.h>
 #include <maya/MFloatArray.h>
 #include <maya/MMatrixArray.h>
 #include <maya/MFnMesh.h>
 #include <maya/MFnMeshData.h>
 #include <maya/MGlobal.h>
+#include <maya/MTransformationMatrix.h>
 
 #include <map>
 #include <vector>
 
 #include "DLCustomDataTypes.h"
+#include "DLCommon.h"
 
 
 class DLInstancer : public MPxNode
@@ -49,17 +52,13 @@ public:
 
 	MStatus dlCalculateVectorAngles(float3 base, float3 direction, float3& angles);
 
-	MStatus dlGenerateRandomValues(float3 maxDifference, float3& values);
-
 	MMatrixArray dlGenerateMatricies(const DLTransformData& transformData);
 
-	MStatus dlDeformMesh(MObject& mesh, MMatrixArray& matricies);
+	MStatus dlDeformMesh(MObject& mesh, MMatrixArray& matricies, bool usePeviousMatrix);
 
 
 	enum attrs
-	{ kInstanceMesh, kReferenceMesh, kNormalOffset, kTranslateOffset,
-		kRotationOffset, kScaleOffset, kNormalRandom, kTranslateRandom, 
-			kRotationRandom, kScaleRandom };
+	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms };
 
 	//Name and ID
 	static MTypeId id;
@@ -90,5 +89,6 @@ private:
 	MMatrixArray previousTransformMatricies_;
 	unsigned int numInstances_;
 	std::map<attrs, bool> attributeDirty_;
+	unsigned int randomSeed;
 };
 

@@ -19,11 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DLCommon.cpp" />
     <ClCompile Include="DLCustomDataTypes.cpp" />
     <ClCompile Include="DLInstancer.cpp" />
     <ClCompile Include="pluginMain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DLCommon.h" />
     <ClInclude Include="DLCustomDataTypes.h" />
     <ClInclude Include="DLInstancer.h" />
   </ItemGroup>
