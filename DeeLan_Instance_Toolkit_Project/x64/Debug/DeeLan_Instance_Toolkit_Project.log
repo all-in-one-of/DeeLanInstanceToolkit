@@ -1,3 +1,4 @@
 ﻿  DLInstancer.cpp
+d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(486): warning C4018: '<': signed/unsigned mismatch
   DeeLan_Instance_Toolkit_Project.vcxproj -> D:\DeeLanInstanceToolkit\DeeLan_Instance_Toolkit_Project\x64\Debug\DeeLan_Instance_Toolkit_Project.mll
   DeeLan_Instance_Toolkit_Project.vcxproj -> D:\DeeLanInstanceToolkit\DeeLan_Instance_Toolkit_Project\x64\Debug\DeeLan_Instance_Toolkit_Project.pdb (Partial PDB)
