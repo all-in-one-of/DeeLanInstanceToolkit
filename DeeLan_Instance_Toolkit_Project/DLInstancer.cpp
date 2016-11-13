@@ -179,6 +179,7 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 	bool recreateOutMesh = false;
 	bool recreateMatricies = false;
+	bool usePreviousMatrix = true;
 	MDataHandle output = data.outputValue(aOutMesh);
 
 
@@ -264,18 +265,28 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 	{
 		status = dlCreateOutputMeshData(inputInstanceMeshData_, numInstances_, outputInstanceMeshData_);
 		outMesh = dlCreateMesh(outputInstanceMeshData_);
-
+		usePreviousMatrix = false;
 	}
 
 	if (recreateMatricies == true)
 	{
-		//copy current matricies to old set
+		if (usePreviousMatrix == true)
+		{
+			previousTransformMatricies_ = ouputTransformMatricies_;
+		}
+		else if (usePreviousMatrix == false)
+		{
+			previousTransformMatricies_.clear();
+		}
+
 		//create new Matricies
+		ouputTransformMatricies_.clear();
+		ouputTransformMatricies_ = dlGenerateMatricies(transformData_);
 	}
 	
 	
 	//Deform Out Mesh
-
+	dlDeformMesh(outMesh, ouputTransformMatricies_, usePreviousMatrix);
 	output.set(outMesh);
 	data.setClean(plug);
 	
@@ -379,6 +390,7 @@ MStatus DLInstancer::dlCreateOutputMeshData(const DLMeshData & inMeshData, unsig
 	for (unsigned int i = 0; i < numCopies; ++i)
 	{
 		outMeshData.appendArrayData(inMeshData);
+		
 	}
 
 	return MS::kSuccess;
@@ -445,29 +457,61 @@ MMatrixArray DLInstancer::dlGenerateMatricies(const DLTransformData& transformDa
 MStatus DLInstancer::dlDeformMesh(MObject& mesh, MMatrixArray& matricies, bool usePeviousMatrix)
 {
 	MStatus status;
-	MItGeometry itGeo(mesh);
 	MFnMesh fnMesh(mesh);
-	unsigned int numBaseMeshPoints = fnMesh.numVertices() / numInstances_;
-	MPoint position;
-	unsigned int matrixIndex = 0;
-	unsigned int curIndex = 0;
 
-	for (; !itGeo.isDone(); itGeo.next(), ++curIndex);
+	if (numInstances_ == 0)
 	{
-		position = itGeo.position(MSpace::kWorld);
-		if (usePeviousMatrix)
-		{
-			position *= previousTransformMatricies_[matrixIndex].inverse();
-		}
-		position *= ouputTransformMatricies_[matrixIndex];
-		itGeo.setPosition(position, MSpace::kWorld);
+		return MS::kSuccess;
+	}
+	unsigned int numBaseMeshPoints = fnMesh.numVertices() / numInstances_;
 
-		if (curIndex % numBaseMeshPoints == 0 && curIndex != 0)
+	MGlobal::displayWarning("dlDeformMesh Called");
+
+	MString numVerts;
+	numVerts = fnMesh.numVertices();
+	MGlobal::displayWarning("Num Verts");
+	MGlobal::displayWarning(numVerts);
+
+	MString basePtNum;
+	basePtNum = numBaseMeshPoints;
+	MGlobal::displayWarning("Number of Points in base mesh");
+	MGlobal::displayWarning(basePtNum);
+
+	MPointArray allPoints;
+	status = fnMesh.getPoints(allPoints, MSpace::kWorld);
+
+	MPoint point;
+	unsigned int matrixIndex = 0;
+
+	for (unsigned int i = 0; i < fnMesh.numVertices(); ++i)
+	{
+		if (i % numBaseMeshPoints == 0 && i != 0)
 		{
 			matrixIndex += 1;
 		}
+
+		point = allPoints[i];
+		if (usePeviousMatrix)
+		{
+			point *= previousTransformMatricies_[matrixIndex].inverse();
+		}
+		point *= ouputTransformMatricies_[matrixIndex];
+		allPoints[i] = point;
+
+		
+		//MString matInd;
+		//matInd = matrixIndex;
+		//MGlobal::displayWarning("MATRIX INDEX");
+		//MGlobal::displayWarning(matInd);
+
+		//MString curInd;
+		//curInd = i;
+		//MGlobal::displayWarning("CURRENT INDEX");
+		//MGlobal::displayWarning(curInd);
+
 	}
 
+	status = fnMesh.setPoints(allPoints, MSpace::kWorld);
 	return MS::kSuccess;
 }
 
