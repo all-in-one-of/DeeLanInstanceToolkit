@@ -35,9 +35,9 @@ struct DLTransformData
 	MFloatVectorArray referenceNormals;
 	MFloatVectorArray normalRotations;
 	float normalOffset;
-	float3 translateOffset;
-	float3 rotationOffset;
-	float3 scaleOffset;
+	MVector translateOffset;
+	MVector rotationOffset;
+	MVector scaleOffset;
 	std::vector<float> normalRandom;
 	std::vector<float3> translateRandom;
 	std::vector<float3> rotationRandom;

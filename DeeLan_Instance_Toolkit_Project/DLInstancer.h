@@ -19,6 +19,8 @@
 #include <maya/MFnMeshData.h>
 #include <maya/MGlobal.h>
 #include <maya/MTransformationMatrix.h>
+#include <maya/MTime.h>
+#include <maya/MAnimControl.h>
 
 #include <map>
 #include <vector>
@@ -54,7 +56,7 @@ public:
 
 	MMatrixArray dlGenerateMatricies(const DLTransformData& transformData);
 
-	MStatus dlDeformMesh(MObject& mesh, MMatrixArray& matricies, bool usePeviousMatrix);
+	MStatus dlDeformMesh(MDataHandle& meshDataHandle, MMatrixArray& matricies);
 
 
 	enum attrs
@@ -75,6 +77,7 @@ public:
 	static MObject aTranslateRandom;
 	static MObject aRotationRandom;
 	static MObject aScaleRandom;
+	static MObject aGeneratedMesh;
 	//Output Attributes
 	static MObject aOutMesh;
 	static MObject aInstanceGroup;
@@ -86,8 +89,8 @@ private:
 	DLMeshData outputInstanceMeshData_;
 	DLTransformData transformData_;
 	MMatrixArray ouputTransformMatricies_;
-	MMatrixArray previousTransformMatricies_;
 	unsigned int numInstances_;
+	unsigned int numInstanceMeshPoints_;
 	std::map<attrs, bool> attributeDirty_;
 	unsigned int randomSeed;
 };
