@@ -1,5 +1,7 @@
 #pragma once
+
 #include <maya/MPxNode.h>
+#include <maya/MPxGeometryFilter.h>
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnCompoundAttribute.h>
@@ -34,16 +36,14 @@ class DLInstancer : public MPxNode
 public:
 	DLInstancer();
 	virtual ~DLInstancer();
-
 	static void* creator();
 	static MStatus initialize();
 
 	virtual MStatus setDependentsDirty(const MPlug&, MPlugArray&);
 
+	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
 
-	/// <param name="plug">Plug to be recalculated.</param> 
-	/// <param name="data">Rhe data block.</param> 
-	virtual MStatus compute(const MPlug &plug, MDataBlock &data);
+	MStatus dlManualSetDependentsDirty(MDataBlock& data);
 
 	MStatus dlGetMeshData(const MObject& mesh, DLMeshData& meshData);
 
@@ -77,6 +77,7 @@ public:
 	static MObject aTranslateRandom;
 	static MObject aRotationRandom;
 	static MObject aScaleRandom;
+	static MObject aNodeSeed;
 	static MObject aGeneratedMesh;
 	//Output Attributes
 	static MObject aOutMesh;
@@ -92,6 +93,7 @@ private:
 	unsigned int numInstances_;
 	unsigned int numInstanceMeshPoints_;
 	std::map<attrs, bool> attributeDirty_;
-	unsigned int randomSeed;
+	MTime prevTime_;
+	bool setDependentsDirtyCalled_;
 };
 

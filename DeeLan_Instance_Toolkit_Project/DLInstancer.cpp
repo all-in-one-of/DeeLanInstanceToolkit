@@ -1,7 +1,7 @@
 #include "DLInstancer.h"
 
 //Type and ID
-MTypeId DLInstancer::id(0x00000000);
+MTypeId DLInstancer::id(0x00000023);
 const MString DLInstancer::nodeName = "dlInstancer";
 
 //Input Attributes
@@ -15,6 +15,7 @@ MObject DLInstancer::aNormalRandom;
 MObject DLInstancer::aTranslateRandom;
 MObject DLInstancer::aRotationRandom;
 MObject DLInstancer::aScaleRandom;
+MObject DLInstancer::aNodeSeed;
 MObject DLInstancer::aGeneratedMesh;
 
 //Output Attributes
@@ -25,7 +26,7 @@ MObject DLInstancer::aInstanceGroupMatricies;
 
 DLInstancer::DLInstancer()
 {
-	transformData_.scaleOffset = { 1.0, 1.0, 1.0 };
+	//transformData_.scaleOffset = { 1.0, 1.0, 1.0 };
 }
 
 DLInstancer::~DLInstancer()
@@ -60,7 +61,7 @@ MStatus DLInstancer::initialize()
 	aNormalOffset = nAttr.create("normalOffset", "nOff", MFnNumericData::kFloat);
 	nAttr.setKeyable(true);
 	addAttribute(aNormalOffset);
-
+	
 	aTranslateOffset = nAttr.create("translateOffset", "tOff", MFnNumericData::k3Float);
 	nAttr.setKeyable(true);
 	addAttribute(aTranslateOffset);
@@ -88,6 +89,10 @@ MStatus DLInstancer::initialize()
 	aScaleRandom = nAttr.create("scaleRandom", "sRand", MFnNumericData::k3Float);
 	nAttr.setKeyable(true);
 	addAttribute(aScaleRandom);
+
+	aNodeSeed = nAttr.create("nodeSeed", "nSeed", MFnNumericData::kInt);
+	nAttr.setKeyable(true);
+	addAttribute(aNodeSeed);
 
 	aGeneratedMesh = tAttr.create("generatedMesh", "gMesh", MFnData::kMesh);
 	tAttr.setConnectable(false);
@@ -129,6 +134,8 @@ MStatus DLInstancer::initialize()
 	attributeAffects(aTranslateRandom, aOutMesh);
 	attributeAffects(aRotationRandom, aOutMesh);
 	attributeAffects(aScaleRandom, aOutMesh);
+	attributeAffects(aNodeSeed, aOutMesh);
+
 
 	/*
 	attributeAffects(aInstanceMesh, aInstanceGroupMesh);
@@ -173,11 +180,19 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 		attributeDirty_[kRandoms] = true;
 	}
 
+	setDependentsDirtyCalled_ = true;
 	return MS::kSuccess;
 }
 
-MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
+MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 {
+	MStatus status;
+
+	if (plug != aOutMesh)
+	{
+		return MS::kUnknownParameter;
+	}
+
 	MGlobal::displayInfo("COMPUTE CALLED!!!");
 
 	/*MGlobal::displayWarning("TIME");
@@ -187,20 +202,27 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 	timeString = (float)time.asUnits(MTime::uiUnit());
 	MGlobal::displayWarning(timeString);*/
 
-	MStatus status;
-
-	if (plug != aOutMesh)
+	MAnimControl anim;
+	MTime curTime = anim.currentTime();
+	if (curTime != prevTime_)
 	{
-		return MS::kUnknownParameter;
+		prevTime_ = curTime;
+		MGlobal::displayInfo("Time Is Different");
+		if (setDependentsDirtyCalled_ == false)
+		{
+			MGlobal::displayInfo("setDepDirty not Called");
+			dlManualSetDependentsDirty(data);
+		}
 	}
+	setDependentsDirtyCalled_ = false;
 
 	MDataHandle hOutput = data.outputValue(aOutMesh);
 	MDataHandle hGeneratedMesh = data.outputValue(aGeneratedMesh);
 	bool recreateOutMesh = false;
 	bool recreateMatricies = false;
-	
 
-	
+
+
 
 	if (attributeDirty_[kInstanceMesh] == true)
 	{
@@ -208,7 +230,7 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 		MObject instanceMesh = data.inputValue(DLInstancer::aInstanceMesh, &status).asMesh();
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
-	
+
 		status = dlGetMeshData(instanceMesh, inputInstanceMeshData_);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
@@ -301,15 +323,77 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 		ouputTransformMatricies_.clear();
 		ouputTransformMatricies_ = dlGenerateMatricies(transformData_);
 	}
-	
-	
+
+
 	//Deform Out Mesh
 	hOutput.set(hGeneratedMesh.asMesh());
 	dlDeformMesh(hOutput, ouputTransformMatricies_);
 	
-	
-
 	data.setClean(plug);
+	return MS::kSuccess;
+}
+
+MStatus DLInstancer::dlManualSetDependentsDirty(MDataBlock& data)
+{
+	MStatus status;
+	MPlugArray plugArray;
+
+	if (!data.isClean(aInstanceMesh))
+	{
+		MPlug plug(thisMObject(), aInstanceMesh);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aReferenceMesh))
+	{
+		MPlug plug(thisMObject(), aReferenceMesh);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aNormalOffset))
+	{
+		MPlug plug(thisMObject(), aNormalOffset);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aTranslateOffset))
+	{
+		MPlug plug(thisMObject(), aTranslateOffset);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aRotationOffset))
+	{
+		MPlug plug(thisMObject(), aRotationOffset);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aScaleOffset))
+	{
+		MPlug plug(thisMObject(), aScaleOffset);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aNormalRandom))
+	{
+		MPlug plug(thisMObject(), aNormalRandom);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aTranslateRandom))
+	{
+		MPlug plug(thisMObject(), aTranslateRandom);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aRotationRandom))
+	{
+		MPlug plug(thisMObject(), aRotationRandom);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aScaleRandom))
+	{
+		MPlug plug(thisMObject(), aScaleRandom);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aNodeSeed))
+	{
+		MPlug plug(thisMObject(), aNodeSeed);
+		setDependentsDirty(plug, plugArray);
+	}
+
 	return MS::kSuccess;
 }
 
