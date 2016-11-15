@@ -10,10 +10,12 @@ MObject DLInstancer::aReferenceMesh;
 MObject DLInstancer::aNormalOffset;
 MObject DLInstancer::aTranslateOffset;
 MObject DLInstancer::aRotationOffset;
+MObject DLInstancer::aUniformScaleOffset;
 MObject DLInstancer::aScaleOffset;
 MObject DLInstancer::aNormalRandom;
 MObject DLInstancer::aTranslateRandom;
 MObject DLInstancer::aRotationRandom;
+MObject DLInstancer::aUniformScaleRandom;
 MObject DLInstancer::aScaleRandom;
 MObject DLInstancer::aNodeSeed;
 MObject DLInstancer::aGeneratedMesh;
@@ -26,7 +28,7 @@ MObject DLInstancer::aInstanceGroupMatricies;
 
 DLInstancer::DLInstancer()
 {
-	//transformData_.scaleOffset = { 1.0, 1.0, 1.0 };
+	transformData_.scaleOffset = { 1.0, 1.0, 1.0 };
 }
 
 DLInstancer::~DLInstancer()
@@ -70,24 +72,36 @@ MStatus DLInstancer::initialize()
 	nAttr.setKeyable(true);
 	addAttribute(aRotationOffset);
 
-	aScaleOffset = nAttr.create("scaleOffset", "sOff", MFnNumericData::k3Float, (1.0, 1.0, 1.0));
+	aUniformScaleOffset = nAttr.create("uniformScaleOffset", "usOff", MFnNumericData::kFloat, 1.0f);
+	nAttr.setKeyable(true);
+	addAttribute(aUniformScaleOffset);
+
+	aScaleOffset = nAttr.create("scaleOffset", "sOff", MFnNumericData::k3Float, (1.0f, 1.0f, 1.0f));
 	nAttr.setKeyable(true);
 	addAttribute(aScaleOffset);
 
 	aNormalRandom = nAttr.create("normalRandom", "nRand", MFnNumericData::kFloat);
 	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f);
 	addAttribute(aNormalRandom);
 
 	aTranslateRandom = nAttr.create("translateRandom", "tRand", MFnNumericData::k3Float);
 	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f, 0.0f, 0.0f);
 	addAttribute(aTranslateRandom);
 
 	aRotationRandom = nAttr.create("rotationRandom", "rRand", MFnNumericData::k3Float);
 	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f, 0.0f, 0.0f);
 	addAttribute(aRotationRandom);
+
+	aUniformScaleRandom = nAttr.create("uniformScaleRandom", "usRand", MFnNumericData::kFloat, 1.0f);
+	nAttr.setKeyable(true);
+	addAttribute(aUniformScaleRandom);
 
 	aScaleRandom = nAttr.create("scaleRandom", "sRand", MFnNumericData::k3Float);
 	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f, 0.0f, 0.0f);
 	addAttribute(aScaleRandom);
 
 	aNodeSeed = nAttr.create("nodeSeed", "nSeed", MFnNumericData::kInt);
@@ -129,10 +143,12 @@ MStatus DLInstancer::initialize()
 	attributeAffects(aNormalOffset, aOutMesh);
 	attributeAffects(aTranslateOffset, aOutMesh);
 	attributeAffects(aRotationOffset, aOutMesh);
+	attributeAffects(aUniformScaleOffset, aOutMesh);
 	attributeAffects(aScaleOffset, aOutMesh);
 	attributeAffects(aNormalRandom, aOutMesh);
 	attributeAffects(aTranslateRandom, aOutMesh);
 	attributeAffects(aRotationRandom, aOutMesh);
+	attributeAffects(aUniformScaleRandom, aOutMesh);
 	attributeAffects(aScaleRandom, aOutMesh);
 	attributeAffects(aNodeSeed, aOutMesh);
 
@@ -171,11 +187,14 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 		attributeDirty_[kReferenceMesh] = true;
 	}
 	else if (plug == aNormalOffset || plug.parent() == aTranslateOffset || 
-			plug.parent() == aRotationOffset || plug.parent() == aScaleOffset)
+			 plug.parent() == aRotationOffset || plug.parent() == aScaleOffset ||
+			 plug == aUniformScaleOffset)
 	{
 		attributeDirty_[kOffsets] = true;
 	}
-	else if (plug == aNormalRandom || plug == aTranslateRandom || plug == aRotationRandom || plug == aScaleRandom)
+	else if (plug == aNormalRandom || plug.parent() == aTranslateRandom || 
+			 plug.parent() == aRotationRandom || plug.parent() == aScaleRandom ||
+			 plug == aUniformScaleRandom)
 	{
 		attributeDirty_[kRandoms] = true;
 	}
@@ -195,13 +214,7 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 
 	MGlobal::displayInfo("COMPUTE CALLED!!!");
 
-	/*MGlobal::displayWarning("TIME");
-	MAnimControl anim;
-	MTime time = anim.currentTime();
-	MString timeString;
-	timeString = (float)time.asUnits(MTime::uiUnit());
-	MGlobal::displayWarning(timeString);*/
-
+	//Supporting Timeline Playback
 	MAnimControl anim;
 	MTime curTime = anim.currentTime();
 	if (curTime != prevTime_)
@@ -274,37 +287,59 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 		float normalOffset = data.inputValue(DLInstancer::aNormalOffset, &status).asFloat();
 		float3& translateOffset = data.inputValue(DLInstancer::aTranslateOffset, &status).asFloat3();
 		float3& rotationOffset = data.inputValue(DLInstancer::aRotationOffset, &status).asFloat3();
+		float uniformScaleOffset = data.inputValue(DLInstancer::aUniformScaleOffset, &status).asFloat();
 		float3& scaleOffset = data.inputValue(DLInstancer::aScaleOffset, &status).asFloat3();
 
 		transformData_.normalOffset = normalOffset;
 		transformData_.translateOffset = translateOffset;
 		transformData_.rotationOffset = rotationOffset;
+		transformData_.uniformScaleOffset = uniformScaleOffset;
 		transformData_.scaleOffset = scaleOffset;
 
 		attributeDirty_[kOffsets] = false;
 		recreateMatricies = true;
 	}
 
-	if (attributeDirty_[kRandoms] == true)
+	if (attributeDirty_[kRandoms] == true || transformData_.normalRandom.length() != numInstances_)
 	{
-		/*float maxNormalRandom = data.inputValue(DLInstancer::aNormalRandom, &status).asFloat();
+		int seed = data.inputValue(DLInstancer::aNodeSeed).asInt();
+		float maxNormalRandom = data.inputValue(DLInstancer::aNormalRandom, &status).asFloat();
 		float3& maxTranslateRandom = data.inputValue(DLInstancer::aTranslateRandom, &status).asFloat3();
 		float3& maxRotationRandom = data.inputValue(DLInstancer::aRotationRandom, &status).asFloat3();
+		float maxUniformScaleRandom = data.inputValue(DLInstancer::aUniformScaleRandom, &status).asFloat();
+		//float maxUniformScaleRandom = data.inputValue(DLInstancer::aUniformScaleOffset, &status).asFloat();
 		float3& maxScaleRandom = data.inputValue(DLInstancer::aScaleRandom, &status).asFloat3();
 
 		float normalRandom;
-		float3 translateRandom;
-		float3 rotationRandom;
-		float3 scaleRandom;
+		MVector translateRandom;
+		MVector rotationRandom;
+		float uniformScaleRandom;
+		MVector scaleRandom;
 
+		transformData_.normalRandom.clear();
+		transformData_.translateRandom.clear();
+		transformData_.rotationRandom.clear();
+		transformData_.uniformScaleRandom.clear();
+		transformData_.scaleRandom.clear();
 
-		transformData_.normalRandom = normalRandom;
-		dlCopyFloat3(transformData_.translateOffset, translateRandom);
-		dlCopyFloat3(transformData_.rotationOffset, rotationRandom);
-		dlCopyFloat3(transformData_.scaleOffset, scaleRandom);
+		for (unsigned int i = 0; i < numInstances_; ++i)
+		{
+			normalRandom = dlGenerateRandomValues((seed + i), maxNormalRandom, kNormal);
+			translateRandom = dlGenerateRandomValues((seed + i), maxTranslateRandom, kTranslate);
+			rotationRandom = dlGenerateRandomValues((seed + i), maxRotationRandom, kRotate);
+			uniformScaleRandom = dlGenerateRandomValues((seed + i), maxUniformScaleRandom, kScale);
+			scaleRandom = dlGenerateRandomValues((seed + i), maxScaleRandom, kScale);
 
+			transformData_.normalRandom.append(normalRandom);
+			transformData_.translateRandom.append(translateRandom);
+			transformData_.rotationRandom.append(rotationRandom);
+			transformData_.uniformScaleRandom.append(uniformScaleRandom);
+			transformData_.scaleRandom.append(scaleRandom);
+
+		}
+		
 		attributeDirty_[kRandoms] = false;
-		recreateMatricies = true;*/
+		recreateMatricies = true;
 	}
 
 
@@ -547,26 +582,53 @@ MMatrixArray DLInstancer::dlGenerateMatricies(const DLTransformData& transformDa
 
 	MPointArray points = transformData.referencePoints;
 	MFloatVectorArray normals = transformData.referenceNormals;
+
 	float normalOffset = transformData.normalOffset;
 	MVector translateOffset = transformData.translateOffset;
 	MVector rotationOffset = transformData.rotationOffset;
+	float uniformScaleOffset = transformData.uniformScaleOffset;
 	MVector scaleOffset = transformData.scaleOffset;
+
+	MFloatArray normalRandom = transformData.normalRandom;
+	MFloatVectorArray translateRandom = transformData.translateRandom;
+	MFloatVectorArray rotationRandom = transformData.rotationRandom;
+	MFloatArray uniformScaleRandom = transformData.uniformScaleRandom;
+	MFloatVectorArray scaleRandom = transformData.scaleRandom;
+
+
 
 	for (unsigned int i = 0; i < numInstances_; ++i)
 	{
 		MTransformationMatrix transformMatrix;
 
-		double3 scale = { scaleOffset[0], scaleOffset[1], scaleOffset[2] };
-		transformMatrix.setScale(scale, MSpace::kWorld);
+		double3 scale = { (scaleOffset[0] + scaleRandom[i].x + uniformScaleOffset + uniformScaleRandom[i]),
+						  (scaleOffset[1] + scaleRandom[i].y + uniformScaleOffset + uniformScaleRandom[i]),
+						  (scaleOffset[2] + scaleRandom[i].z + uniformScaleOffset + uniformScaleRandom[i]) };
 
-		double3 rotation = { rotationOffset[0], rotationOffset[1], rotationOffset[2] };
-		transformMatrix.setRotation(rotation, MTransformationMatrix::kXYZ);
+		for (int i = 0; i < 3; ++i)
+		{
+			scale[i] <= 0 ? scale[i] = 0 : scale[i];
+		}
 
-		MPoint normal = normals[i] * normalOffset;
-		MVector translation(points[i] + translateOffset + normal);
-		transformMatrix.setTranslation(translation, MSpace::kWorld);
+		status = transformMatrix.setScale(scale, MSpace::kWorld);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
 
-		outMatrixArray.append(transformMatrix.asMatrix());
+		double3 rotation = { (rotationOffset[0] + rotationRandom[i].x),
+							 (rotationOffset[1] + rotationRandom[i].y),
+							 (rotationOffset[2] + rotationRandom[i].z) };
+		status = transformMatrix.setRotation(rotation, MTransformationMatrix::kXYZ);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+
+		MVector normal = normals[i] * (normalOffset + normalRandom[i]);
+		MVector translation(points[i] + translateOffset + normal + translateRandom[i]);
+		status = transformMatrix.setTranslation(translation, MSpace::kWorld);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+
+		status = outMatrixArray.append(transformMatrix.asMatrix());
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
 	}
 	return outMatrixArray;
 }

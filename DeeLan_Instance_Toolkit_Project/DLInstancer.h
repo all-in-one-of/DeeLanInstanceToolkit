@@ -72,10 +72,12 @@ public:
 	static MObject aNormalOffset;
 	static MObject aTranslateOffset;
 	static MObject aRotationOffset;
+	static MObject aUniformScaleOffset;
 	static MObject aScaleOffset;
 	static MObject aNormalRandom;
 	static MObject aTranslateRandom;
 	static MObject aRotationRandom;
+	static MObject aUniformScaleRandom;
 	static MObject aScaleRandom;
 	static MObject aNodeSeed;
 	static MObject aGeneratedMesh;
@@ -95,5 +97,6 @@ private:
 	std::map<attrs, bool> attributeDirty_;
 	MTime prevTime_;
 	bool setDependentsDirtyCalled_;
+	
 };
 

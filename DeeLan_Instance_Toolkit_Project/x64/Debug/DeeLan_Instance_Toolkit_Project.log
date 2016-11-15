@@ -1,3 +1,15 @@
 ﻿  DLInstancer.cpp
+d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(614): warning C4927: illegal conversion; more than one user-defined conversion has been implicitly applied
+  d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(614): note: while calling the constructor 'MMatrixArray::MMatrixArray(unsigned int)'
+  c:\program files\autodesk\maya2017\include\maya\mmatrixarray.h(68): note: see declaration of 'MMatrixArray::MMatrixArray'
+d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(620): warning C4927: illegal conversion; more than one user-defined conversion has been implicitly applied
+  d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(620): note: while calling the constructor 'MMatrixArray::MMatrixArray(unsigned int)'
+  c:\program files\autodesk\maya2017\include\maya\mmatrixarray.h(68): note: see declaration of 'MMatrixArray::MMatrixArray'
+d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(626): warning C4927: illegal conversion; more than one user-defined conversion has been implicitly applied
+  d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(626): note: while calling the constructor 'MMatrixArray::MMatrixArray(unsigned int)'
+  c:\program files\autodesk\maya2017\include\maya\mmatrixarray.h(68): note: see declaration of 'MMatrixArray::MMatrixArray'
+d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(630): warning C4927: illegal conversion; more than one user-defined conversion has been implicitly applied
+  d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(630): note: while calling the constructor 'MMatrixArray::MMatrixArray(unsigned int)'
+  c:\program files\autodesk\maya2017\include\maya\mmatrixarray.h(68): note: see declaration of 'MMatrixArray::MMatrixArray'
   DeeLan_Instance_Toolkit_Project.vcxproj -> D:\DeeLanInstanceToolkit\DeeLan_Instance_Toolkit_Project\x64\Debug\DeeLan_Instance_Toolkit_Project.mll
   DeeLan_Instance_Toolkit_Project.vcxproj -> D:\DeeLanInstanceToolkit\DeeLan_Instance_Toolkit_Project\x64\Debug\DeeLan_Instance_Toolkit_Project.pdb (Partial PDB)

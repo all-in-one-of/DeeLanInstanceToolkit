@@ -1,5 +1,29 @@
 #include "DLCommon.h"
 
+int getModeSeed(DLRandomMode mode)
+{
+	int seed;
+
+	if (mode == kNormal)
+	{
+		seed = 1234;
+	}
+	else if (mode == kTranslate)
+	{
+		seed = 2143;
+	}
+	else if (mode == kRotate)
+	{
+		seed = 3241;
+	}
+	else if (mode == kScale)
+	{
+		seed = 4312;
+	}
+
+	return seed;
+}
+
 void dlCopyFloat3(const float3 & copyFrom, float3 & copyTo)
 {
 	copyTo[0] = copyFrom[0];
@@ -7,13 +31,34 @@ void dlCopyFloat3(const float3 & copyFrom, float3 & copyTo)
 	copyTo[2] = copyFrom[2];
 }
 
-void dlGenerateRandomValues(unsigned int seed, unsigned int seedOffset, float maxDifference, float & values)
+float dlGenerateRandomValues(int inSeed, float maxDifference, DLRandomMode mode)
 {
-
+	int modeSeed = getModeSeed(mode);
+	int seed = inSeed + modeSeed;
+	std::mt19937 randGen(seed);
+	
+	float deviation = maxDifference / 2;
+	std::uniform_real_distribution<float> offset(-deviation, deviation);
+	float outFloat = offset(randGen);
+	return outFloat;
 }
 
-void dlGenerateRandomValues(unsigned int seed, unsigned int seedOffset, float3 maxDifference, float3 & values)
+MVector dlGenerateRandomValues(int inSeed, float3 maxDifference, DLRandomMode mode)
 {
+	int modeSeed = getModeSeed(mode);
+	MVector outVec;
 
+	for (int i = 0; i < 3; ++i)
+	{
+		int indexSeed = i * 13;
+		int seed = inSeed + modeSeed + indexSeed;
+		std::mt19937 randGen(seed);
+
+		float deviation = maxDifference[i] / 2;
+		std::uniform_real_distribution<float> offset(-deviation, deviation);
+
+		outVec[i] = offset(randGen);
+	}
+	return outVec;
 }
 

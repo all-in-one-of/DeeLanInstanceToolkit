@@ -37,11 +37,13 @@ struct DLTransformData
 	float normalOffset;
 	MVector translateOffset;
 	MVector rotationOffset;
+	float uniformScaleOffset;
 	MVector scaleOffset;
-	std::vector<float> normalRandom;
-	std::vector<float3> translateRandom;
-	std::vector<float3> rotationRandom;
-	std::vector<float3> scaleRandom;
+	MFloatArray normalRandom;
+	MFloatVectorArray translateRandom;
+	MFloatVectorArray rotationRandom;
+	MFloatArray uniformScaleRandom;
+	MFloatVectorArray scaleRandom;
 
 
 };

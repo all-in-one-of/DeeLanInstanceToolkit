@@ -1,9 +1,16 @@
 #pragma once
 
 #include <maya/MGlobal.h>
+#include <maya/MVector.h>
+
+#include <random>
+
+enum DLRandomMode { kNormal, kTranslate, kRotate, kScale };
+
+int getModeSeed(DLRandomMode mode);
 
 void dlCopyFloat3(const float3& copyFrom, float3& copyTo);
 
-void dlGenerateRandomValues(unsigned int seed, unsigned int seedOffset, float maxDifference, float& values);
+float dlGenerateRandomValues(int inSeed, float maxDifference, DLRandomMode mode);
 
-void dlGenerateRandomValues(unsigned int seed, unsigned int seedOffset, float3 maxDifference, float3& values);
+MVector dlGenerateRandomValues(int inSeed, float3 maxDifference, DLRandomMode mode);
