@@ -1,6 +1,6 @@
 #include "DLCommon.h"
 
-int getModeSeed(DLRandomMode mode)
+int DLCommon::getModeSeed(DLRandomMode mode)
 {
 	int seed;
 
@@ -24,14 +24,14 @@ int getModeSeed(DLRandomMode mode)
 	return seed;
 }
 
-void dlCopyFloat3(const float3 & copyFrom, float3 & copyTo)
+void DLCommon::dlCopyFloat3(const float3 & copyFrom, float3 & copyTo)
 {
 	copyTo[0] = copyFrom[0];
 	copyTo[1] = copyFrom[1];
 	copyTo[2] = copyFrom[2];
 }
 
-float dlGenerateRandomValues(int inSeed, float maxDifference, DLRandomMode mode)
+float DLCommon::dlGenerateRandomValues(int inSeed, float maxDifference, DLRandomMode mode)
 {
 	int modeSeed = getModeSeed(mode);
 	int seed = inSeed + modeSeed;
@@ -43,7 +43,7 @@ float dlGenerateRandomValues(int inSeed, float maxDifference, DLRandomMode mode)
 	return outFloat;
 }
 
-MVector dlGenerateRandomValues(int inSeed, float3 maxDifference, DLRandomMode mode)
+MVector DLCommon::dlGenerateRandomValues(int inSeed, float3 maxDifference, DLRandomMode mode)
 {
 	int modeSeed = getModeSeed(mode);
 	MVector outVec;

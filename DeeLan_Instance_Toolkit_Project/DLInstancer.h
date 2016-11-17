@@ -54,13 +54,13 @@ public:
 
 	MMatrix dlGenerateNormalAlignmentMatrix(MVector direction);
 
-	MMatrixArray glGenerateInstanceDeformMatricies(const DLTransformData& transformData);
+	MMatrixArray glGenerateInstanceDeformMatricies(const DLTransformData& transformData, bool alignNormals);
 
 	MStatus dlDeformMesh(MDataHandle& meshDataHandle, MMatrixArray& matricies);
 
 
 	enum attrs
-	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms };
+	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms, kAlignment };
 
 	//Name and ID
 	static MTypeId id;
@@ -69,10 +69,11 @@ public:
 	//Input Attributes
 	static MObject aInstanceMesh;
 	static MObject aReferenceMesh;
+	static MObject aAlignToNormals;
 	static MObject aNormalOffset;
-	static MObject aTranslateOffset;
-	static MObject aRotationOffset;
-	static MObject aUniformScaleOffset;
+	static MObject aTranslate;
+	static MObject aRotate;
+	static MObject aUniformScale;
 	static MObject aScaleOffset;
 	static MObject aNormalRandom;
 	static MObject aTranslateRandom;
@@ -81,6 +82,7 @@ public:
 	static MObject aScaleRandom;
 	static MObject aNodeSeed;
 	static MObject aGeneratedMesh;
+
 	//Output Attributes
 	static MObject aOutMesh;
 	static MObject aInstanceGroup;
