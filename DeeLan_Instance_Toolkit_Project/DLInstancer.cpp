@@ -1,7 +1,7 @@
 #include "DLInstancer.h"
 
 //Type and ID
-MTypeId DLInstancer::id(0x00000000);
+MTypeId DLInstancer::id(0x00000023);
 const MString DLInstancer::nodeName = "dlInstancer";
 
 //Input Attributes
@@ -10,19 +10,25 @@ MObject DLInstancer::aReferenceMesh;
 MObject DLInstancer::aNormalOffset;
 MObject DLInstancer::aTranslateOffset;
 MObject DLInstancer::aRotationOffset;
+MObject DLInstancer::aUniformScaleOffset;
 MObject DLInstancer::aScaleOffset;
 MObject DLInstancer::aNormalRandom;
 MObject DLInstancer::aTranslateRandom;
 MObject DLInstancer::aRotationRandom;
+MObject DLInstancer::aUniformScaleRandom;
 MObject DLInstancer::aScaleRandom;
+MObject DLInstancer::aNodeSeed;
+MObject DLInstancer::aGeneratedMesh;
+
 //Output Attributes
 MObject DLInstancer::aOutMesh;
 MObject DLInstancer::aInstanceGroup;
 MObject DLInstancer::aInstanceGroupMesh;
 MObject DLInstancer::aInstanceGroupMatricies;
 
-DLInstancer::DLInstancer() 
+DLInstancer::DLInstancer()
 {
+	transformData_.scaleOffset = { 1.0, 1.0, 1.0 };
 }
 
 DLInstancer::~DLInstancer()
@@ -57,7 +63,7 @@ MStatus DLInstancer::initialize()
 	aNormalOffset = nAttr.create("normalOffset", "nOff", MFnNumericData::kFloat);
 	nAttr.setKeyable(true);
 	addAttribute(aNormalOffset);
-
+	
 	aTranslateOffset = nAttr.create("translateOffset", "tOff", MFnNumericData::k3Float);
 	nAttr.setKeyable(true);
 	addAttribute(aTranslateOffset);
@@ -66,25 +72,46 @@ MStatus DLInstancer::initialize()
 	nAttr.setKeyable(true);
 	addAttribute(aRotationOffset);
 
-	aScaleOffset = nAttr.create("scaleOffset", "sOff", MFnNumericData::k3Float);
+	aUniformScaleOffset = nAttr.create("uniformScaleOffset", "usOff", MFnNumericData::kFloat, 1.0f);
+	nAttr.setKeyable(true);
+	addAttribute(aUniformScaleOffset);
+
+	aScaleOffset = nAttr.create("scaleOffset", "sOff", MFnNumericData::k3Float, (1.0f, 1.0f, 1.0f));
 	nAttr.setKeyable(true);
 	addAttribute(aScaleOffset);
 
 	aNormalRandom = nAttr.create("normalRandom", "nRand", MFnNumericData::kFloat);
 	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f);
 	addAttribute(aNormalRandom);
 
 	aTranslateRandom = nAttr.create("translateRandom", "tRand", MFnNumericData::k3Float);
 	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f, 0.0f, 0.0f);
 	addAttribute(aTranslateRandom);
 
 	aRotationRandom = nAttr.create("rotationRandom", "rRand", MFnNumericData::k3Float);
 	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f, 0.0f, 0.0f);
 	addAttribute(aRotationRandom);
+
+	aUniformScaleRandom = nAttr.create("uniformScaleRandom", "usRand", MFnNumericData::kFloat);
+	nAttr.setKeyable(true);
+	addAttribute(aUniformScaleRandom);
 
 	aScaleRandom = nAttr.create("scaleRandom", "sRand", MFnNumericData::k3Float);
 	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f, 0.0f, 0.0f);
 	addAttribute(aScaleRandom);
+
+	aNodeSeed = nAttr.create("nodeSeed", "nSeed", MFnNumericData::kInt);
+	nAttr.setKeyable(true);
+	addAttribute(aNodeSeed);
+
+	aGeneratedMesh = tAttr.create("generatedMesh", "gMesh", MFnData::kMesh);
+	tAttr.setConnectable(false);
+	tAttr.setHidden(true);
+	addAttribute(aGeneratedMesh);
 
 	//Output Attributes
 	aOutMesh = tAttr.create("outMesh", "oMesh", MFnData::kMesh);
@@ -116,11 +143,15 @@ MStatus DLInstancer::initialize()
 	attributeAffects(aNormalOffset, aOutMesh);
 	attributeAffects(aTranslateOffset, aOutMesh);
 	attributeAffects(aRotationOffset, aOutMesh);
+	attributeAffects(aUniformScaleOffset, aOutMesh);
 	attributeAffects(aScaleOffset, aOutMesh);
 	attributeAffects(aNormalRandom, aOutMesh);
 	attributeAffects(aTranslateRandom, aOutMesh);
 	attributeAffects(aRotationRandom, aOutMesh);
+	attributeAffects(aUniformScaleRandom, aOutMesh);
 	attributeAffects(aScaleRandom, aOutMesh);
+	attributeAffects(aNodeSeed, aOutMesh);
+
 
 	/*
 	attributeAffects(aInstanceMesh, aInstanceGroupMesh);
@@ -145,6 +176,8 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 {
 	MStatus status;
 
+	MGlobal::displayInfo("SET DEPENDENTS DIRTY CALLED!!!");
+
 	if (plug == aInstanceMesh)
 	{
 		attributeDirty_[kInstanceMesh] = true;
@@ -153,21 +186,25 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 	{
 		attributeDirty_[kReferenceMesh] = true;
 	}
-	else if (plug == aNormalOffset || plug == aTranslateOffset || plug == aRotationOffset || plug == aScaleOffset)
+	else if (plug == aNormalOffset || plug.parent() == aTranslateOffset || 
+			 plug.parent() == aRotationOffset || plug.parent() == aScaleOffset ||
+			 plug == aUniformScaleOffset)
 	{
 		attributeDirty_[kOffsets] = true;
 	}
-	else if (plug == aNormalRandom || plug == aTranslateRandom || plug == aRotationRandom || plug == aScaleRandom)
+	else if (plug == aNormalRandom || plug.parent() == aTranslateRandom || 
+			 plug.parent() == aRotationRandom || plug.parent() == aScaleRandom ||
+			 plug == aUniformScaleRandom || plug == aNodeSeed)
 	{
 		attributeDirty_[kRandoms] = true;
 	}
 
+	setDependentsDirtyCalled_ = true;
 	return MS::kSuccess;
 }
 
-MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
+MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 {
-	MGlobal::displayInfo("COMPUTE CALLED!!!");
 	MStatus status;
 
 	if (plug != aOutMesh)
@@ -175,29 +212,48 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 		return MS::kUnknownParameter;
 	}
 
-	MObject outMesh = data.outputValue(DLInstancer::aOutMesh, &status).asMesh();
-	CHECK_MSTATUS_AND_RETURN_IT(status);
+	MGlobal::displayInfo("COMPUTE CALLED!!!");
+
+	//Supporting Timeline Playback
+	MAnimControl anim;
+	MTime curTime = anim.currentTime();
+	if (curTime != prevTime_)
+	{
+		prevTime_ = curTime;
+		MGlobal::displayInfo("Time Is Different");
+		if (setDependentsDirtyCalled_ == false)
+		{
+			MGlobal::displayInfo("setDepDirty not Called");
+			dlManualSetDependentsDirty(data);
+		}
+	}
+	setDependentsDirtyCalled_ = false;
+
+	MDataHandle hOutput = data.outputValue(aOutMesh);
+	MDataHandle hGeneratedMesh = data.outputValue(aGeneratedMesh);
 	bool recreateOutMesh = false;
 	bool recreateMatricies = false;
-	bool usePreviousMatrix = true;
-	MDataHandle output = data.outputValue(aOutMesh);
+
 
 
 
 	if (attributeDirty_[kInstanceMesh] == true)
 	{
+		MGlobal::displayInfo("Instance Mesh");
 		MObject instanceMesh = data.inputValue(DLInstancer::aInstanceMesh, &status).asMesh();
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
-	
+
 		status = dlGetMeshData(instanceMesh, inputInstanceMeshData_);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
+		attributeDirty_[kInstanceMesh] = false;
 		recreateOutMesh = true;
 	}
 
 	if (attributeDirty_[kReferenceMesh] == true)
 	{
+		MGlobal::displayInfo("Reference Mesh");
 		MObject referenceMesh = data.inputValue(DLInstancer::aReferenceMesh, &status).asMesh();
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
@@ -207,7 +263,7 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 
 		status = fnRefMesh.getPoints(points, MSpace::kWorld);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
-		status = fnRefMesh.getVertexNormals(true, normals, MSpace::kWorld);
+		status = fnRefMesh.getVertexNormals(false, normals, MSpace::kWorld);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
 		if (points.length() != numInstances_)
@@ -215,83 +271,173 @@ MStatus DLInstancer::compute(const MPlug &plug, MDataBlock &data)
 			numInstances_ = points.length();
 			recreateOutMesh = true;
 		}
+		transformData_.referencePoints.clear();
+		transformData_.referenceNormals.clear();
+		transformData_.normalAlignmentMatricies.clear();
 
 		transformData_.referencePoints = points;
 		transformData_.referenceNormals = normals;
 
-		//calculate normal rotations and store in transform data
+		
+		for (unsigned int i = 0; i < normals.length(); ++i)
+		{
+			MMatrix alignMatrix = dlGenerateNormalAlignmentMatrix(normals[i]);
+			transformData_.normalAlignmentMatricies.append(alignMatrix);
 
+		}
+		//calculate normal rotations and store in transform data
+		attributeDirty_[kReferenceMesh] = false;
 		recreateMatricies = true;
 	}
 
 	if (attributeDirty_[kOffsets] == true)
 	{
+		MGlobal::displayInfo("Offsets");
+
 		float normalOffset = data.inputValue(DLInstancer::aNormalOffset, &status).asFloat();
 		float3& translateOffset = data.inputValue(DLInstancer::aTranslateOffset, &status).asFloat3();
 		float3& rotationOffset = data.inputValue(DLInstancer::aRotationOffset, &status).asFloat3();
+		float uniformScaleOffset = data.inputValue(DLInstancer::aUniformScaleOffset, &status).asFloat();
 		float3& scaleOffset = data.inputValue(DLInstancer::aScaleOffset, &status).asFloat3();
 
 		transformData_.normalOffset = normalOffset;
-		dlCopyFloat3(transformData_.translateOffset, translateOffset);
-		dlCopyFloat3(transformData_.rotationOffset, rotationOffset);
-		dlCopyFloat3(transformData_.scaleOffset, scaleOffset);
+		transformData_.translateOffset = translateOffset;
+		transformData_.rotationOffset = rotationOffset;
+		transformData_.uniformScaleOffset = uniformScaleOffset;
+		transformData_.scaleOffset = scaleOffset;
 
+		attributeDirty_[kOffsets] = false;
 		recreateMatricies = true;
 	}
 
-	if (attributeDirty_[kRandoms] == true)
+	if (attributeDirty_[kRandoms] == true || transformData_.normalRandom.length() != numInstances_)
 	{
-		/*float maxNormalRandom = data.inputValue(DLInstancer::aNormalRandom, &status).asFloat();
+		int seed = data.inputValue(DLInstancer::aNodeSeed).asInt();
+		float maxNormalRandom = data.inputValue(DLInstancer::aNormalRandom, &status).asFloat();
 		float3& maxTranslateRandom = data.inputValue(DLInstancer::aTranslateRandom, &status).asFloat3();
 		float3& maxRotationRandom = data.inputValue(DLInstancer::aRotationRandom, &status).asFloat3();
+		float maxUniformScaleRandom = data.inputValue(DLInstancer::aUniformScaleRandom, &status).asFloat();
+		//float maxUniformScaleRandom = data.inputValue(DLInstancer::aUniformScaleOffset, &status).asFloat();
 		float3& maxScaleRandom = data.inputValue(DLInstancer::aScaleRandom, &status).asFloat3();
 
 		float normalRandom;
-		float3 translateRandom;
-		float3 rotationRandom;
-		float3 scaleRandom;
+		MVector translateRandom;
+		MVector rotationRandom;
+		float uniformScaleRandom;
+		MVector scaleRandom;
 
+		transformData_.normalRandom.clear();
+		transformData_.translateRandom.clear();
+		transformData_.rotationRandom.clear();
+		transformData_.uniformScaleRandom.clear();
+		transformData_.scaleRandom.clear();
 
-		transformData_.normalRandom = normalRandom;
-		dlCopyFloat3(transformData_.translateOffset, translateRandom);
-		dlCopyFloat3(transformData_.rotationOffset, rotationRandom);
-		dlCopyFloat3(transformData_.scaleOffset, scaleRandom);
+		for (unsigned int i = 0; i < numInstances_; ++i)
+		{
+			normalRandom = dlGenerateRandomValues((seed + i), maxNormalRandom, kNormal);
+			translateRandom = dlGenerateRandomValues((seed + i), maxTranslateRandom, kTranslate);
+			rotationRandom = dlGenerateRandomValues((seed + i), maxRotationRandom, kRotate);
+			uniformScaleRandom = dlGenerateRandomValues((seed + i), maxUniformScaleRandom, kScale);
+			scaleRandom = dlGenerateRandomValues((seed + i), maxScaleRandom, kScale);
 
-		recreateMatricies = true;*/
+			transformData_.normalRandom.append(normalRandom);
+			transformData_.translateRandom.append(translateRandom);
+			transformData_.rotationRandom.append(rotationRandom);
+			transformData_.uniformScaleRandom.append(uniformScaleRandom);
+			transformData_.scaleRandom.append(scaleRandom);
+
+		}
+		
+		attributeDirty_[kRandoms] = false;
+		recreateMatricies = true;
 	}
 
 
 	if (recreateOutMesh == true)
 	{
+		MGlobal::displayInfo("Recreate Mesh");
 		status = dlCreateOutputMeshData(inputInstanceMeshData_, numInstances_, outputInstanceMeshData_);
-		outMesh = dlCreateMesh(outputInstanceMeshData_);
-		usePreviousMatrix = false;
+		MObject generatedMesh = dlCreateMesh(outputInstanceMeshData_);
+		hGeneratedMesh.set(generatedMesh);
 	}
 
 	if (recreateMatricies == true)
 	{
-		if (usePreviousMatrix == true)
-		{
-			previousTransformMatricies_ = ouputTransformMatricies_;
-		}
-		else if (usePreviousMatrix == false)
-		{
-			previousTransformMatricies_.clear();
-		}
-
+		MGlobal::displayInfo("Recreate Matricies");
 		//create new Matricies
 		ouputTransformMatricies_.clear();
-		ouputTransformMatricies_ = dlGenerateMatricies(transformData_);
+		ouputTransformMatricies_ = glGenerateInstanceDeformMatricies(transformData_);
 	}
-	
-	
-	//Deform Out Mesh
-	dlDeformMesh(outMesh, ouputTransformMatricies_, usePreviousMatrix);
-	output.set(outMesh);
-	data.setClean(plug);
-	
-	
 
+
+	//Deform Out Mesh
+	hOutput.set(hGeneratedMesh.asMesh());
+	dlDeformMesh(hOutput, ouputTransformMatricies_);
+	
+	data.setClean(plug);
+	return MS::kSuccess;
+}
+
+MStatus DLInstancer::dlManualSetDependentsDirty(MDataBlock& data)
+{
+	MStatus status;
+	MPlugArray plugArray;
+
+	if (!data.isClean(aInstanceMesh))
+	{
+		MPlug plug(thisMObject(), aInstanceMesh);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aReferenceMesh))
+	{
+		MPlug plug(thisMObject(), aReferenceMesh);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aNormalOffset))
+	{
+		MPlug plug(thisMObject(), aNormalOffset);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aTranslateOffset))
+	{
+		MPlug plug(thisMObject(), aTranslateOffset);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aRotationOffset))
+	{
+		MPlug plug(thisMObject(), aRotationOffset);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aScaleOffset))
+	{
+		MPlug plug(thisMObject(), aScaleOffset);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aNormalRandom))
+	{
+		MPlug plug(thisMObject(), aNormalRandom);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aTranslateRandom))
+	{
+		MPlug plug(thisMObject(), aTranslateRandom);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aRotationRandom))
+	{
+		MPlug plug(thisMObject(), aRotationRandom);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aScaleRandom))
+	{
+		MPlug plug(thisMObject(), aScaleRandom);
+		setDependentsDirty(plug, plugArray);
+	}
+	if (!data.isClean(aNodeSeed))
+	{
+		MPlug plug(thisMObject(), aNodeSeed);
+		setDependentsDirty(plug, plugArray);
+	}
 
 	return MS::kSuccess;
 }
@@ -322,7 +468,7 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	//SORT OUT NORMALS
-	status = fnMesh.getNormals(meshData.normals, MSpace::kWorld);
+	status = fnMesh.getVertexNormals(false, meshData.normals, MSpace::kWorld);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	MString map = "map1";
@@ -383,7 +529,7 @@ MStatus DLInstancer::dlCreateOutputMeshData(const DLMeshData & inMeshData, unsig
 		outMeshData.uvCounts.clear();
 	}
 
-
+	numInstanceMeshPoints_ = inMeshData.numPoints;
 	outMeshData.numPoints = inMeshData.numPoints * numCopies;
 	outMeshData.numPolys = inMeshData.numPolys * numCopies;
 
@@ -430,88 +576,144 @@ MObject DLInstancer::dlCreateMesh(const DLMeshData& meshData)
 	return dataWrapper;
 }
 
-MStatus DLInstancer::dlCalculateVectorAngles(float3 base, float3 direction, float3 & angles)
+MMatrix DLInstancer::dlGenerateNormalAlignmentMatrix(MVector direction)
 {
 	MStatus status;
+	direction.normalize();
+	MVector sideVec(1, 0, 0);
+
+	MVector y = direction;
+	MVector z = sideVec ^ direction;
+	MVector x = direction ^ z;
+
+	////TESTING////
+	/*MGlobal::displayInfo("NEW MATRIX");
+	MString xVec;
+	MString yVec;
+	MString zVec;
+	MString x_; 
+	MString y_; 
+	MString z_; 
+	x_ = x.x;
+	y_ = x.y;
+	z_ = x.z;
+	xVec.format("X VECTOR = (^1s, ^2s, ^3s)", x_, y_, z_);
+	MGlobal::displayInfo(xVec);
+	x_ = y.x;
+	y_ = y.y;
+	z_ = y.z;
+	yVec.format("Y VECTOR = (^1s, ^2s, ^3s)", x_, y_, z_);
+	MGlobal::displayInfo(yVec);
+	x_ = z.x;
+	y_ = z.y;
+	z_ = z.z;
+	zVec.format("Z VECTOR = (^1s, ^2s, ^3s)", x_, y_, z_);
+	MGlobal::displayInfo(zVec);*/
+	////TESTING////
 
 
-	return MS::kSuccess;
+	MMatrix matrix;
+
+	matrix[0][0] = x.x; matrix[0][1] = x.y; matrix[0][2] = x.z; matrix[0][3] = 0.0;
+	matrix[1][0] = y.x; matrix[1][1] = y.y; matrix[1][2] = y.z; matrix[1][3] = 0.0;
+	matrix[2][0] = z.x; matrix[2][1] = z.y; matrix[2][2] = z.z; matrix[2][3] = 0.0;
+	matrix[3][0] = 0.0; matrix[3][1] = 0.0; matrix[3][2] = 0.1; matrix[3][3] = 1.0;
+
+	return matrix;
 }
 
-MMatrixArray DLInstancer::dlGenerateMatricies(const DLTransformData& transformData)
+MMatrixArray DLInstancer::glGenerateInstanceDeformMatricies(const DLTransformData& transformData)
 {
 	MStatus status;
 
 	MMatrixArray outMatrixArray;
+	MMatrixArray normalMatricies = transformData_.normalAlignmentMatricies;
+
+
+	MPointArray points = transformData.referencePoints;
+	MFloatVectorArray normals = transformData.referenceNormals;
+
+	float normalOffset = transformData.normalOffset;
+	MVector translateOffset = transformData.translateOffset;
+	MVector rotationOffset = transformData.rotationOffset;
+	float uniformScaleOffset = transformData.uniformScaleOffset;
+	MVector scaleOffset = transformData.scaleOffset;
+
+	MFloatArray normalRandom = transformData.normalRandom;
+	MFloatVectorArray translateRandom = transformData.translateRandom;
+	MFloatVectorArray rotationRandom = transformData.rotationRandom;
+	MFloatArray uniformScaleRandom = transformData.uniformScaleRandom;
+	MFloatVectorArray scaleRandom = transformData.scaleRandom;
+
+
 
 	for (unsigned int i = 0; i < numInstances_; ++i)
 	{
-		MTransformationMatrix transformMatrix;
-		MVector translation(transformData.referencePoints[i]);
-		transformMatrix.setTranslation(translation, MSpace::kWorld);
-		outMatrixArray.append(transformMatrix.asMatrix());
+		MTransformationMatrix transformMatrix(normalMatricies[i]);
+
+		double3 scale = { (scaleOffset[0] + scaleRandom[i].x + uniformScaleOffset + uniformScaleRandom[i]),
+						  (scaleOffset[1] + scaleRandom[i].y + uniformScaleOffset + uniformScaleRandom[i]),
+						  (scaleOffset[2] + scaleRandom[i].z + uniformScaleOffset + uniformScaleRandom[i]) };
+
+		for (int i = 0; i < 3; ++i)
+		{
+			scale[i] <= 0 ? scale[i] = 0 : scale[i];
+		}
+
+		status = transformMatrix.setScale(scale, MSpace::kWorld);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+		double3 rotation = { (rotationOffset[0] + rotationRandom[i].x),
+							 (rotationOffset[1] + rotationRandom[i].y),
+							 (rotationOffset[2] + rotationRandom[i].z) };
+		status = transformMatrix.addRotation(rotation, MTransformationMatrix::kXYZ, MSpace::kTransform);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+
+		MVector normal = normals[i] * (normalOffset + normalRandom[i]);
+		MVector translation(points[i] + translateOffset + normal + translateRandom[i]);
+		status = transformMatrix.setTranslation(translation, MSpace::kWorld);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+		MMatrix outMatrix(transformMatrix.asMatrix());
+		status = outMatrixArray.append(outMatrix);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
 	}
 	return outMatrixArray;
 }
 
-MStatus DLInstancer::dlDeformMesh(MObject& mesh, MMatrixArray& matricies, bool usePeviousMatrix)
+MStatus DLInstancer::dlDeformMesh(MDataHandle& meshDataHandle, MMatrixArray& matricies)
 {
 	MStatus status;
-	MFnMesh fnMesh(mesh);
+	MItGeometry itGeo(meshDataHandle, false, &status);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	if (numInstances_ == 0)
 	{
 		return MS::kSuccess;
 	}
-	unsigned int numBaseMeshPoints = fnMesh.numVertices() / numInstances_;
-
-	MGlobal::displayWarning("dlDeformMesh Called");
-
-	MString numVerts;
-	numVerts = fnMesh.numVertices();
-	MGlobal::displayWarning("Num Verts");
-	MGlobal::displayWarning(numVerts);
-
-	MString basePtNum;
-	basePtNum = numBaseMeshPoints;
-	MGlobal::displayWarning("Number of Points in base mesh");
-	MGlobal::displayWarning(basePtNum);
 
 	MPointArray allPoints;
-	status = fnMesh.getPoints(allPoints, MSpace::kWorld);
+	status = itGeo.allPositions(allPoints, MSpace::kWorld);
 
 	MPoint point;
 	unsigned int matrixIndex = 0;
 
-	for (unsigned int i = 0; i < fnMesh.numVertices(); ++i)
+	for (; !itGeo.isDone(); itGeo.next())
 	{
-		if (i % numBaseMeshPoints == 0 && i != 0)
+		if (itGeo.index() % numInstanceMeshPoints_ == 0 && itGeo.index() != 0)
 		{
 			matrixIndex += 1;
 		}
 
-		point = allPoints[i];
-		if (usePeviousMatrix)
-		{
-			point *= previousTransformMatricies_[matrixIndex].inverse();
-		}
-		point *= ouputTransformMatricies_[matrixIndex];
-		allPoints[i] = point;
-
+		point = allPoints[itGeo.index()];
 		
-		//MString matInd;
-		//matInd = matrixIndex;
-		//MGlobal::displayWarning("MATRIX INDEX");
-		//MGlobal::displayWarning(matInd);
-
-		//MString curInd;
-		//curInd = i;
-		//MGlobal::displayWarning("CURRENT INDEX");
-		//MGlobal::displayWarning(curInd);
-
+		point *= ouputTransformMatricies_[matrixIndex];
+		allPoints[itGeo.index()] = point;
 	}
 
-	status = fnMesh.setPoints(allPoints, MSpace::kWorld);
+	status = itGeo.setAllPositions(allPoints, MSpace::kWorld);
 	return MS::kSuccess;
 }
 

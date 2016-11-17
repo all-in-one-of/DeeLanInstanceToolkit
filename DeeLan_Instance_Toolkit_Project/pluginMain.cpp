@@ -3,20 +3,20 @@
 
 #include "DLInstancer.h"
 
-MStatus initializePlugin(MObject& obj)
+MStatus initializePlugin(MObject obj)
 {
 	MStatus status;
 
-	MFnPlugin fnPlugin(obj, "DeeLan", "0.1");
+	MFnPlugin fnPlugin(obj, "DeeLan", "0.1", "Any");
 	status = fnPlugin.registerNode(DLInstancer::nodeName, DLInstancer::id, 
-		DLInstancer::creator, DLInstancer::initialize, MPxNode::kDependNode);
+		DLInstancer::creator, DLInstancer::initialize);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	return MS::kSuccess;
 }
 
 
-MStatus uninitializePlugin(MObject& obj)
+MStatus uninitializePlugin(MObject obj)
 {
 	MStatus status;
 
