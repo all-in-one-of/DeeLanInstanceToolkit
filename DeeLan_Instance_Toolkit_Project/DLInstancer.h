@@ -52,9 +52,9 @@ public:
 
 	MObject dlCreateMesh(const DLMeshData& meshData);
 
-	MStatus dlCalculateVectorAngles(float3 base, float3 direction, float3& angles);
+	MMatrix dlGenerateNormalAlignmentMatrix(MVector direction);
 
-	MMatrixArray dlGenerateMatricies(const DLTransformData& transformData);
+	MMatrixArray glGenerateInstanceDeformMatricies(const DLTransformData& transformData);
 
 	MStatus dlDeformMesh(MDataHandle& meshDataHandle, MMatrixArray& matricies);
 

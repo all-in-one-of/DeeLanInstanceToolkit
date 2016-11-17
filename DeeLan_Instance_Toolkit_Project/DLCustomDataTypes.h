@@ -4,6 +4,7 @@
 #include <maya/MPointArray.h>
 #include <maya/MFloatArray.h>
 #include <maya/MFloatVectorArray.h>
+#include <maya/MMatrixArray.h>
 
 #include <vector>
 
@@ -33,7 +34,7 @@ struct DLTransformData
 	bool initialized;
 	MPointArray referencePoints;
 	MFloatVectorArray referenceNormals;
-	MFloatVectorArray normalRotations;
+	MMatrixArray normalAlignmentMatricies;
 	float normalOffset;
 	MVector translateOffset;
 	MVector rotationOffset;

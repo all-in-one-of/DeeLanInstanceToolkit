@@ -95,7 +95,7 @@ MStatus DLInstancer::initialize()
 	nAttr.setMin(0.0f, 0.0f, 0.0f);
 	addAttribute(aRotationRandom);
 
-	aUniformScaleRandom = nAttr.create("uniformScaleRandom", "usRand", MFnNumericData::kFloat, 1.0f);
+	aUniformScaleRandom = nAttr.create("uniformScaleRandom", "usRand", MFnNumericData::kFloat);
 	nAttr.setKeyable(true);
 	addAttribute(aUniformScaleRandom);
 
@@ -194,7 +194,7 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 	}
 	else if (plug == aNormalRandom || plug.parent() == aTranslateRandom || 
 			 plug.parent() == aRotationRandom || plug.parent() == aScaleRandom ||
-			 plug == aUniformScaleRandom)
+			 plug == aUniformScaleRandom || plug == aNodeSeed)
 	{
 		attributeDirty_[kRandoms] = true;
 	}
@@ -271,10 +271,20 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 			numInstances_ = points.length();
 			recreateOutMesh = true;
 		}
+		transformData_.referencePoints.clear();
+		transformData_.referenceNormals.clear();
+		transformData_.normalAlignmentMatricies.clear();
 
 		transformData_.referencePoints = points;
 		transformData_.referenceNormals = normals;
 
+		
+		for (unsigned int i = 0; i < normals.length(); ++i)
+		{
+			MMatrix alignMatrix = dlGenerateNormalAlignmentMatrix(normals[i]);
+			transformData_.normalAlignmentMatricies.append(alignMatrix);
+
+		}
 		//calculate normal rotations and store in transform data
 		attributeDirty_[kReferenceMesh] = false;
 		recreateMatricies = true;
@@ -356,7 +366,7 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 		MGlobal::displayInfo("Recreate Matricies");
 		//create new Matricies
 		ouputTransformMatricies_.clear();
-		ouputTransformMatricies_ = dlGenerateMatricies(transformData_);
+		ouputTransformMatricies_ = glGenerateInstanceDeformMatricies(transformData_);
 	}
 
 
@@ -566,19 +576,59 @@ MObject DLInstancer::dlCreateMesh(const DLMeshData& meshData)
 	return dataWrapper;
 }
 
-MStatus DLInstancer::dlCalculateVectorAngles(float3 base, float3 direction, float3 & angles)
+MMatrix DLInstancer::dlGenerateNormalAlignmentMatrix(MVector direction)
 {
 	MStatus status;
+	direction.normalize();
+	MVector sideVec(1, 0, 0);
+
+	MVector y = direction;
+	MVector z = sideVec ^ direction;
+	MVector x = direction ^ z;
+
+	////TESTING////
+	/*MGlobal::displayInfo("NEW MATRIX");
+	MString xVec;
+	MString yVec;
+	MString zVec;
+	MString x_; 
+	MString y_; 
+	MString z_; 
+	x_ = x.x;
+	y_ = x.y;
+	z_ = x.z;
+	xVec.format("X VECTOR = (^1s, ^2s, ^3s)", x_, y_, z_);
+	MGlobal::displayInfo(xVec);
+	x_ = y.x;
+	y_ = y.y;
+	z_ = y.z;
+	yVec.format("Y VECTOR = (^1s, ^2s, ^3s)", x_, y_, z_);
+	MGlobal::displayInfo(yVec);
+	x_ = z.x;
+	y_ = z.y;
+	z_ = z.z;
+	zVec.format("Z VECTOR = (^1s, ^2s, ^3s)", x_, y_, z_);
+	MGlobal::displayInfo(zVec);*/
+	////TESTING////
 
 
-	return MS::kSuccess;
+	MMatrix matrix;
+
+	matrix[0][0] = x.x; matrix[0][1] = x.y; matrix[0][2] = x.z; matrix[0][3] = 0.0;
+	matrix[1][0] = y.x; matrix[1][1] = y.y; matrix[1][2] = y.z; matrix[1][3] = 0.0;
+	matrix[2][0] = z.x; matrix[2][1] = z.y; matrix[2][2] = z.z; matrix[2][3] = 0.0;
+	matrix[3][0] = 0.0; matrix[3][1] = 0.0; matrix[3][2] = 0.1; matrix[3][3] = 1.0;
+
+	return matrix;
 }
 
-MMatrixArray DLInstancer::dlGenerateMatricies(const DLTransformData& transformData)
+MMatrixArray DLInstancer::glGenerateInstanceDeformMatricies(const DLTransformData& transformData)
 {
 	MStatus status;
 
 	MMatrixArray outMatrixArray;
+	MMatrixArray normalMatricies = transformData_.normalAlignmentMatricies;
+
 
 	MPointArray points = transformData.referencePoints;
 	MFloatVectorArray normals = transformData.referenceNormals;
@@ -599,7 +649,7 @@ MMatrixArray DLInstancer::dlGenerateMatricies(const DLTransformData& transformDa
 
 	for (unsigned int i = 0; i < numInstances_; ++i)
 	{
-		MTransformationMatrix transformMatrix;
+		MTransformationMatrix transformMatrix(normalMatricies[i]);
 
 		double3 scale = { (scaleOffset[0] + scaleRandom[i].x + uniformScaleOffset + uniformScaleRandom[i]),
 						  (scaleOffset[1] + scaleRandom[i].y + uniformScaleOffset + uniformScaleRandom[i]),
@@ -616,7 +666,7 @@ MMatrixArray DLInstancer::dlGenerateMatricies(const DLTransformData& transformDa
 		double3 rotation = { (rotationOffset[0] + rotationRandom[i].x),
 							 (rotationOffset[1] + rotationRandom[i].y),
 							 (rotationOffset[2] + rotationRandom[i].z) };
-		status = transformMatrix.setRotation(rotation, MTransformationMatrix::kXYZ);
+		status = transformMatrix.addRotation(rotation, MTransformationMatrix::kXYZ, MSpace::kTransform);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
 
@@ -625,8 +675,8 @@ MMatrixArray DLInstancer::dlGenerateMatricies(const DLTransformData& transformDa
 		status = transformMatrix.setTranslation(translation, MSpace::kWorld);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
-
-		status = outMatrixArray.append(transformMatrix.asMatrix());
+		MMatrix outMatrix(transformMatrix.asMatrix());
+		status = outMatrixArray.append(outMatrix);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	}
