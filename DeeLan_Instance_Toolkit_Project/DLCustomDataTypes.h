@@ -5,6 +5,8 @@
 #include <maya/MFloatArray.h>
 #include <maya/MFloatVectorArray.h>
 #include <maya/MMatrixArray.h>
+#include <maya/MString.h>
+#include <maya/MStringArray.h>
 
 #include <vector>
 
@@ -16,11 +18,14 @@ struct DLMeshData
 	MPointArray pointArray;
 	MIntArray polyCounts;
 	MIntArray polyConnects;
-	MFloatVectorArray normals;
+	std::vector<bool> edgeSmoothing;
 	MFloatArray uArray;
 	MFloatArray vArray;
-	MIntArray uvIDs;
 	MIntArray uvCounts;
+	MIntArray uvIDs;
+	int numUVSets;
+	MStringArray uvSetNames;
+	
 
 
 	void appendArrayData(const DLMeshData& dataToAppend);

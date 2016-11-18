@@ -433,16 +433,20 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 	meshData.pointArray.clear();
 	meshData.polyCounts.clear();
 	meshData.polyConnects.clear();
-	meshData.normals.clear();
+	meshData.edgeSmoothing.clear();
 	meshData.uArray.clear();
 	meshData.vArray.clear();
-	meshData.uvIDs.clear();
 	meshData.uvCounts.clear();
+	meshData.uvIDs.clear();
+
 
 
 	MFnMesh fnMesh(mesh, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 	MItMeshPolygon itPoly(mesh, &status);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+	MObject meshCopy(mesh);
+	MItMeshEdge itEdge(meshCopy, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 	MItMeshFaceVertex itFaceVert(mesh, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
@@ -452,54 +456,57 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 	status = fnMesh.getPoints(meshData.pointArray, MSpace::kWorld);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
-	fnMesh.getNormals(meshData.normals);
+	
+
+	for (; !itEdge.isDone(); itEdge.next())
+	{
+		meshData.edgeSmoothing.push_back(itEdge.isSmooth());
+	}
+	
+
+
+	MString map("map1");
+	status = fnMesh.getUVs(meshData.uArray, meshData.vArray, &map);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	MString tempString;
-	tempString = meshData.normals.length();
+	tempString = meshData.uArray.length();
 	MGlobal::displayInfo(tempString);
-
-	/*MString map = "map1";
-	status = fnMesh.getUVs(meshData.uArray, meshData.vArray, &map);
-	CHECK_MSTATUS_AND_RETURN_IT(status);*/
 
 	for (; !itPoly.isDone(); itPoly.next())
 	{
-		int numVerts = itPoly.polygonVertexCount(&status);
+		int numPolyVerts = itPoly.polygonVertexCount(&status);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
-		status = meshData.polyCounts.append(numVerts);
+		status = meshData.polyCounts.append(numPolyVerts);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
-		MIntArray vertIDs;
-		status = itPoly.getVertices(vertIDs);
+		MIntArray polyVertIDs;
+		status = itPoly.getVertices(polyVertIDs);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
-		for (unsigned int i = 0; i < vertIDs.length(); ++i)
+		for (unsigned int i = 0; i < polyVertIDs.length(); ++i)
 		{
+			status = meshData.polyConnects.append(polyVertIDs[i]);
 			CHECK_MSTATUS_AND_RETURN_IT(status);
-			status = meshData.polyConnects.append(vertIDs[i]);
 		}
 
-		MFloatArray tempUV;
-		status = itPoly.getUVs(tempUV, tempUV);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-		status = meshData.uvCounts.append( tempUV.length() );
+		MFloatArray tempUArray;
+		MFloatArray tempVArray;
+		status = itPoly.getUVs(tempUArray, tempVArray, &map);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
+		meshData.uvCounts.append(tempUArray.length());	
 	}
 
-	//for (; !itFaceVert.isDone(); itFaceVert.next())
-	//{
-	//	MVector normal;
-	//	itFaceVert.getNormal(normal);
-	//	meshData.normals.append(normal);
-	//	/*int uvID;
-	//	MString map = "map1";
-	//	status = itFaceVert.getUVIndex(uvID, &map);
-	//	CHECK_MSTATUS_AND_RETURN_IT(status);
 
-	//	status = meshData.uvIDs.append(uvID);
-	//	CHECK_MSTATUS_AND_RETURN_IT(status);*/
-	//}
 
+
+
+	for (; !itFaceVert.isDone(); itFaceVert.next())
+	{
+		int index;
+		itFaceVert.getUVIndex(index, &map);
+		meshData.uvIDs.append(index);
+	}
 
 	return MS::kSuccess;
 }
@@ -513,7 +520,7 @@ MStatus DLInstancer::dlCreateOutputMeshData(const DLMeshData & inMeshData, unsig
 		outMeshData.pointArray.clear();
 		outMeshData.polyCounts.clear();
 		outMeshData.polyConnects.clear();
-		outMeshData.normals.clear();
+		outMeshData.edgeSmoothing.clear();
 		outMeshData.uArray.clear();
 		outMeshData.vArray.clear();
 		outMeshData.uvIDs.clear();
@@ -540,42 +547,28 @@ MObject DLInstancer::dlCreateMesh(const DLMeshData& meshData)
 	MObject dataWrapper = dataFn.create();
 	MFnMesh generator;
 
+	
+
 	MObject outMesh = generator.create(meshData.numPoints, meshData.numPolys, 
 									   meshData.pointArray, meshData.polyCounts, 
 									   meshData.polyConnects, meshData.uArray, 
 									   meshData.vArray, dataWrapper, &status);
 
-	MFnMesh fnOutMesh(dataWrapper);
-	MFloatVectorArray normalsCopy(meshData.normals);
+	MItMeshEdge itEdge(dataWrapper);
 
-	fnOutMesh.setNormals(normalsCopy);
-
-	MString tempString;
-	tempString = meshData.normals.length();
-	MGlobal::displayInfo(tempString);
-
-
-	/*MString numNormals;
-	numNormals = meshData.normals.length();
-	MGlobal::displayInfo("NUMBER OF NORMALS");
-	MGlobal::displayInfo(numNormals);
+	for (; !itEdge.isDone(); itEdge.next())
+	{
+		itEdge.setSmoothing(meshData.edgeSmoothing[itEdge.index()]);
+	}
 
 	MFnMesh fnOutMesh(dataWrapper);
-	MFloatVectorArray normalsCopy(meshData.normals);
-	
-	MItMeshFaceVertex itFaceVert(dataWrapper);*/
-	
-	//int i = 0;
-	//for (; !itFaceVert.isDone(); itFaceVert.next())
-	//{
-	//	MString tempString;
-	//	tempString = i;
-	//	MGlobal::displayInfo(tempString);
-	//	i += 1;
-	//	MVector normal(normalsCopy[i]);
-	//	fnOutMesh.setFaceVertexNormal(normal, itFaceVert.faceId(), itFaceVert.vertId());
-
-	//}
+	MString map = "map1";
+	status = fnOutMesh.assignUVs(meshData.uvCounts, meshData.uvIDs, &map);
+	if (status != MS::kSuccess)
+	{
+		MGlobal::displayError(status.errorString());
+		MGlobal::displayError("Problem Assigning UVs");
+	}
 
 
 	if (status != MS::kSuccess)
@@ -585,19 +578,6 @@ MObject DLInstancer::dlCreateMesh(const DLMeshData& meshData)
 		MFnMeshData fnNullMesh;
 		return fnNullMesh.create();
 	}
-
-
-	
-
-
-	MString map = "map1";
-	fnOutMesh.assignUVs(meshData.uvCounts, meshData.uvIDs, &map);
-	if (status != MS::kSuccess)
-	{
-		MGlobal::displayError(status.errorString());
-		MGlobal::displayError("Problem Assigning UVs");
-	}
-
 
 	return dataWrapper;
 }

@@ -15,6 +15,7 @@
 #include <maya/MItMeshFaceVertex.h>
 #include <maya/MItDependencyGraph.h>
 #include <maya/MItGeometry.h>
+#include <maya/MItMeshEdge.h>
 #include <maya/MFloatArray.h>
 #include <maya/MMatrixArray.h>
 #include <maya/MFnMesh.h>
@@ -99,6 +100,5 @@ private:
 	std::map<attrs, bool> attributeDirty_;
 	MTime prevTime_;
 	bool setDependentsDirtyCalled_;
-	
 };
 
