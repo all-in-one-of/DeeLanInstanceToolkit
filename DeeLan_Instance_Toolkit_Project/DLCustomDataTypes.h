@@ -12,7 +12,6 @@
 
 struct DLMeshData
 {
-	bool initialized;
 	unsigned int numPoints;
 	unsigned int numPolys;
 	MPointArray pointArray;
@@ -36,7 +35,6 @@ struct DLMeshData
 
 struct DLTransformData
 {
-	bool initialized;
 	MPointArray referencePoints;
 	MFloatVectorArray referenceNormals;
 	MMatrixArray normalAlignmentMatricies;

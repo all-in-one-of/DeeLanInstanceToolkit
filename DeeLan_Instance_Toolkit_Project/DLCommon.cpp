@@ -24,12 +24,8 @@ int DLCommon::getModeSeed(DLRandomMode mode)
 	return seed;
 }
 
-void DLCommon::dlCopyFloat3(const float3 & copyFrom, float3 & copyTo)
-{
-	copyTo[0] = copyFrom[0];
-	copyTo[1] = copyFrom[1];
-	copyTo[2] = copyFrom[2];
-}
+
+
 
 float DLCommon::dlGenerateRandomValues(int inSeed, float maxDifference, DLRandomMode mode)
 {

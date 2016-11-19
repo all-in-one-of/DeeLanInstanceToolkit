@@ -55,7 +55,7 @@ public:
 
 	MMatrix dlGenerateNormalAlignmentMatrix(MVector direction);
 
-	MMatrixArray glGenerateInstanceDeformMatricies(const DLTransformData& transformData, bool alignNormals);
+	MMatrixArray dlGenerateInstanceDeformMatricies(const DLTransformData& transformData, bool alignNormals);
 
 	MStatus dlDeformMesh(MDataHandle& meshDataHandle, MMatrixArray& matricies);
 
@@ -86,13 +86,11 @@ public:
 
 	//Output Attributes
 	static MObject aOutMesh;
-	static MObject aInstanceGroup;
-	static MObject aInstanceGroupMesh;
-	static MObject aInstanceGroupMatricies;
+
 
 private:
-	DLMeshData inputInstanceMeshData_;
-	DLMeshData outputInstanceMeshData_;
+	DLMeshData inputMeshData_;
+	DLMeshData outputMeshData_;
 	DLTransformData transformData_;
 	MMatrixArray ouputTransformMatricies_;
 	unsigned int numInstances_;

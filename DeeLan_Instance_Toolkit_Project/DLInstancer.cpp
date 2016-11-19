@@ -23,9 +23,7 @@ MObject DLInstancer::aGeneratedMesh;
 
 //Output Attributes
 MObject DLInstancer::aOutMesh;
-MObject DLInstancer::aInstanceGroup;
-MObject DLInstancer::aInstanceGroupMesh;
-MObject DLInstancer::aInstanceGroupMatricies;
+
 
 DLInstancer::DLInstancer()
 {
@@ -223,7 +221,7 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
 
-		status = dlGetMeshData(instanceMesh, inputInstanceMeshData_);
+		status = dlGetMeshData(instanceMesh, inputMeshData_);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
 		attributeDirty_[kInstanceMesh] = false;
@@ -337,8 +335,8 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 	{
 		//MGlobal::displayInfo("Recreate Mesh"); //DEBUGGING
 
-		status = dlCreateOutputMeshData(inputInstanceMeshData_, numInstances_, outputInstanceMeshData_);
-		MObject generatedMesh = dlCreateMesh(outputInstanceMeshData_);
+		status = dlCreateOutputMeshData(inputMeshData_, numInstances_, outputMeshData_);
+		MObject generatedMesh = dlCreateMesh(outputMeshData_);
 		hGeneratedMesh.set(generatedMesh);
 	}
 
@@ -349,7 +347,7 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 		bool alignToNormals = data.inputValue(DLInstancer::aAlignToNormals).asBool();
 		//create new Matricies
 		ouputTransformMatricies_.clear();
-		ouputTransformMatricies_ = glGenerateInstanceDeformMatricies(transformData_, alignToNormals);
+		ouputTransformMatricies_ = dlGenerateInstanceDeformMatricies(transformData_, alignToNormals);
 		attributeDirty_[kAlignment] = false;
 	}
 
@@ -452,6 +450,7 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	meshData.numPoints = fnMesh.numVertices();
+	numInstanceMeshPoints_ = fnMesh.numVertices();
 	meshData.numPolys = fnMesh.numPolygons();
 	status = fnMesh.getPoints(meshData.pointArray, MSpace::kWorld);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
@@ -464,8 +463,9 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 	}
 	
 
-
-	MString map("map1");
+	MStringArray uvSets;
+	fnMesh.getUVSetNames(uvSets);
+	MString map = uvSets[0];
 	status = fnMesh.getUVs(meshData.uArray, meshData.vArray, &map);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
@@ -527,7 +527,7 @@ MStatus DLInstancer::dlCreateOutputMeshData(const DLMeshData & inMeshData, unsig
 		outMeshData.uvCounts.clear();
 	}
 
-	numInstanceMeshPoints_ = inMeshData.numPoints;
+	
 	outMeshData.numPoints = inMeshData.numPoints * numCopies;
 	outMeshData.numPolys = inMeshData.numPolys * numCopies;
 
@@ -628,7 +628,7 @@ MMatrix DLInstancer::dlGenerateNormalAlignmentMatrix(MVector direction)
 	return matrix;
 }
 
-MMatrixArray DLInstancer::glGenerateInstanceDeformMatricies(const DLTransformData& transformData, bool alignNormals)
+MMatrixArray DLInstancer::dlGenerateInstanceDeformMatricies(const DLTransformData& transformData, bool alignNormals)
 {
 	MStatus status;
 
