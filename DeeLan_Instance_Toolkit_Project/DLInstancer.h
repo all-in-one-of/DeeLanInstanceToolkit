@@ -15,6 +15,7 @@
 #include <maya/MItMeshFaceVertex.h>
 #include <maya/MItDependencyGraph.h>
 #include <maya/MItGeometry.h>
+#include <maya/MItMeshEdge.h>
 #include <maya/MFloatArray.h>
 #include <maya/MMatrixArray.h>
 #include <maya/MFnMesh.h>
@@ -54,13 +55,13 @@ public:
 
 	MMatrix dlGenerateNormalAlignmentMatrix(MVector direction);
 
-	MMatrixArray glGenerateInstanceDeformMatricies(const DLTransformData& transformData);
+	MMatrixArray dlGenerateInstanceDeformMatricies(const DLTransformData& transformData, bool alignNormals);
 
 	MStatus dlDeformMesh(MDataHandle& meshDataHandle, MMatrixArray& matricies);
 
 
 	enum attrs
-	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms };
+	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms, kAlignment };
 
 	//Name and ID
 	static MTypeId id;
@@ -69,10 +70,11 @@ public:
 	//Input Attributes
 	static MObject aInstanceMesh;
 	static MObject aReferenceMesh;
+	static MObject aAlignToNormals;
 	static MObject aNormalOffset;
-	static MObject aTranslateOffset;
-	static MObject aRotationOffset;
-	static MObject aUniformScaleOffset;
+	static MObject aTranslate;
+	static MObject aRotate;
+	static MObject aUniformScale;
 	static MObject aScaleOffset;
 	static MObject aNormalRandom;
 	static MObject aTranslateRandom;
@@ -81,15 +83,14 @@ public:
 	static MObject aScaleRandom;
 	static MObject aNodeSeed;
 	static MObject aGeneratedMesh;
+
 	//Output Attributes
 	static MObject aOutMesh;
-	static MObject aInstanceGroup;
-	static MObject aInstanceGroupMesh;
-	static MObject aInstanceGroupMatricies;
+
 
 private:
-	DLMeshData inputInstanceMeshData_;
-	DLMeshData outputInstanceMeshData_;
+	DLMeshData inputMeshData_;
+	DLMeshData outputMeshData_;
 	DLTransformData transformData_;
 	MMatrixArray ouputTransformMatricies_;
 	unsigned int numInstances_;
@@ -97,6 +98,5 @@ private:
 	std::map<attrs, bool> attributeDirty_;
 	MTime prevTime_;
 	bool setDependentsDirtyCalled_;
-	
 };
 

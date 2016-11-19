@@ -7,10 +7,11 @@ const MString DLInstancer::nodeName = "dlInstancer";
 //Input Attributes
 MObject DLInstancer::aInstanceMesh;
 MObject DLInstancer::aReferenceMesh;
+MObject DLInstancer::aAlignToNormals;
 MObject DLInstancer::aNormalOffset;
-MObject DLInstancer::aTranslateOffset;
-MObject DLInstancer::aRotationOffset;
-MObject DLInstancer::aUniformScaleOffset;
+MObject DLInstancer::aTranslate;
+MObject DLInstancer::aRotate;
+MObject DLInstancer::aUniformScale;
 MObject DLInstancer::aScaleOffset;
 MObject DLInstancer::aNormalRandom;
 MObject DLInstancer::aTranslateRandom;
@@ -22,9 +23,7 @@ MObject DLInstancer::aGeneratedMesh;
 
 //Output Attributes
 MObject DLInstancer::aOutMesh;
-MObject DLInstancer::aInstanceGroup;
-MObject DLInstancer::aInstanceGroupMesh;
-MObject DLInstancer::aInstanceGroupMatricies;
+
 
 DLInstancer::DLInstancer()
 {
@@ -49,124 +48,97 @@ MStatus DLInstancer::initialize()
 	MFnCompoundAttribute cAttr;
 	MFnMatrixAttribute mAttr;
 
-	//Input Attributes
-	aInstanceMesh = tAttr.create("instanceMesh", "iMesh", MFnData::kMesh);
-	tAttr.setKeyable(true);
-	tAttr.setReadable(false);
-	addAttribute(aInstanceMesh);
-
-	aReferenceMesh = tAttr.create("referenceMesh", "rMesh", MFnData::kMesh);
-	tAttr.setKeyable(true);
-	tAttr.setReadable(false);
-	addAttribute(aReferenceMesh);
-
-	aNormalOffset = nAttr.create("normalOffset", "nOff", MFnNumericData::kFloat);
-	nAttr.setKeyable(true);
-	addAttribute(aNormalOffset);
-	
-	aTranslateOffset = nAttr.create("translateOffset", "tOff", MFnNumericData::k3Float);
-	nAttr.setKeyable(true);
-	addAttribute(aTranslateOffset);
-
-	aRotationOffset = nAttr.create("rotationOffset", "rOff", MFnNumericData::k3Float);
-	nAttr.setKeyable(true);
-	addAttribute(aRotationOffset);
-
-	aUniformScaleOffset = nAttr.create("uniformScaleOffset", "usOff", MFnNumericData::kFloat, 1.0f);
-	nAttr.setKeyable(true);
-	addAttribute(aUniformScaleOffset);
-
-	aScaleOffset = nAttr.create("scaleOffset", "sOff", MFnNumericData::k3Float, (1.0f, 1.0f, 1.0f));
-	nAttr.setKeyable(true);
-	addAttribute(aScaleOffset);
-
-	aNormalRandom = nAttr.create("normalRandom", "nRand", MFnNumericData::kFloat);
-	nAttr.setKeyable(true);
-	nAttr.setMin(0.0f);
-	addAttribute(aNormalRandom);
-
-	aTranslateRandom = nAttr.create("translateRandom", "tRand", MFnNumericData::k3Float);
-	nAttr.setKeyable(true);
-	nAttr.setMin(0.0f, 0.0f, 0.0f);
-	addAttribute(aTranslateRandom);
-
-	aRotationRandom = nAttr.create("rotationRandom", "rRand", MFnNumericData::k3Float);
-	nAttr.setKeyable(true);
-	nAttr.setMin(0.0f, 0.0f, 0.0f);
-	addAttribute(aRotationRandom);
-
-	aUniformScaleRandom = nAttr.create("uniformScaleRandom", "usRand", MFnNumericData::kFloat);
-	nAttr.setKeyable(true);
-	addAttribute(aUniformScaleRandom);
-
-	aScaleRandom = nAttr.create("scaleRandom", "sRand", MFnNumericData::k3Float);
-	nAttr.setKeyable(true);
-	nAttr.setMin(0.0f, 0.0f, 0.0f);
-	addAttribute(aScaleRandom);
-
-	aNodeSeed = nAttr.create("nodeSeed", "nSeed", MFnNumericData::kInt);
-	nAttr.setKeyable(true);
-	addAttribute(aNodeSeed);
-
-	aGeneratedMesh = tAttr.create("generatedMesh", "gMesh", MFnData::kMesh);
-	tAttr.setConnectable(false);
-	tAttr.setHidden(true);
-	addAttribute(aGeneratedMesh);
-
 	//Output Attributes
 	aOutMesh = tAttr.create("outMesh", "oMesh", MFnData::kMesh);
 	tAttr.setStorable(false);
 	tAttr.setWritable(false);
 	addAttribute(aOutMesh);
 
-
-	aInstanceGroup = cAttr.create("instanceGroup", "instGrp");
-	cAttr.setStorable(false);
-	cAttr.setWritable(false);
-
-	aInstanceGroupMesh = tAttr.create("instanceGroupMesh", "instGrpMesh", MFnData::kMesh);
-	tAttr.setStorable(false);
-	tAttr.setWritable(false);
-
-	aInstanceGroupMatricies = mAttr.create("instanceGroupMatricies", "instGrpMatricies");
-	mAttr.setArray(true);
-	mAttr.setStorable(false);
-	mAttr.setWritable(false);
-
-	cAttr.addChild(aInstanceGroupMesh);
-	cAttr.addChild(aInstanceGroupMatricies);
-	addAttribute(aInstanceGroup);
-
-	//Attribute Relationships
+	//Input Attributes
+	aInstanceMesh = tAttr.create("instanceMesh", "iMesh", MFnData::kMesh);
+	tAttr.setKeyable(true);
+	tAttr.setReadable(false);
+	addAttribute(aInstanceMesh);
 	attributeAffects(aInstanceMesh, aOutMesh);
+
+	aReferenceMesh = tAttr.create("referenceMesh", "rMesh", MFnData::kMesh);
+	tAttr.setKeyable(true);
+	tAttr.setReadable(false);
+	addAttribute(aReferenceMesh);
 	attributeAffects(aReferenceMesh, aOutMesh);
+
+	aAlignToNormals = nAttr.create("alignToNormals", "alignNormals", MFnNumericData::kBoolean, true);
+	nAttr.setKeyable(true);
+	addAttribute(aAlignToNormals);
+	attributeAffects(aAlignToNormals, aOutMesh);
+
+	aNormalOffset = nAttr.create("normalOffset", "nOff", MFnNumericData::kFloat);
+	nAttr.setKeyable(true);
+	addAttribute(aNormalOffset);
 	attributeAffects(aNormalOffset, aOutMesh);
-	attributeAffects(aTranslateOffset, aOutMesh);
-	attributeAffects(aRotationOffset, aOutMesh);
-	attributeAffects(aUniformScaleOffset, aOutMesh);
+	
+	aTranslate = nAttr.create("translateOffset", "tOff", MFnNumericData::k3Float);
+	nAttr.setKeyable(true);
+	addAttribute(aTranslate);
+	attributeAffects(aTranslate, aOutMesh);
+
+	aRotate = nAttr.create("rotationOffset", "rOff", MFnNumericData::k3Float);
+	nAttr.setKeyable(true);
+	addAttribute(aRotate);
+	attributeAffects(aRotate, aOutMesh);
+
+	aUniformScale = nAttr.create("uniformScaleOffset", "usOff", MFnNumericData::kFloat, 1.0f);
+	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f);
+	addAttribute(aUniformScale);
+	attributeAffects(aUniformScale, aOutMesh);
+
+	aScaleOffset = nAttr.create("scaleOffset", "sOff", MFnNumericData::k3Float, (0.0f, 0.0f, 0.0f));
+	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f, 0.0f, 0.0f);
+	addAttribute(aScaleOffset);
 	attributeAffects(aScaleOffset, aOutMesh);
+
+	aNormalRandom = nAttr.create("normalRandom", "nRand", MFnNumericData::kFloat);
+	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f);
+	addAttribute(aNormalRandom);
 	attributeAffects(aNormalRandom, aOutMesh);
+
+	aTranslateRandom = nAttr.create("translateRandom", "tRand", MFnNumericData::k3Float);
+	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f, 0.0f, 0.0f);
+	addAttribute(aTranslateRandom);
 	attributeAffects(aTranslateRandom, aOutMesh);
+
+	aRotationRandom = nAttr.create("rotationRandom", "rRand", MFnNumericData::k3Float);
+	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f, 0.0f, 0.0f);
+	addAttribute(aRotationRandom);
 	attributeAffects(aRotationRandom, aOutMesh);
+
+	aUniformScaleRandom = nAttr.create("uniformScaleRandom", "usRand", MFnNumericData::kFloat);
+	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f);
+	addAttribute(aUniformScaleRandom);
 	attributeAffects(aUniformScaleRandom, aOutMesh);
+
+	aScaleRandom = nAttr.create("scaleRandom", "sRand", MFnNumericData::k3Float);
+	nAttr.setKeyable(true);
+	nAttr.setMin(0.0f, 0.0f, 0.0f);
+	addAttribute(aScaleRandom);
 	attributeAffects(aScaleRandom, aOutMesh);
+
+	aNodeSeed = nAttr.create("nodeSeed", "nSeed", MFnNumericData::kInt);
+	nAttr.setKeyable(true);
+	addAttribute(aNodeSeed);
 	attributeAffects(aNodeSeed, aOutMesh);
 
+	aGeneratedMesh = tAttr.create("generatedMesh", "gMesh", MFnData::kMesh);
+	tAttr.setConnectable(false);
+	tAttr.setHidden(true);
+	addAttribute(aGeneratedMesh);
 
-	/*
-	attributeAffects(aInstanceMesh, aInstanceGroupMesh);
-	attributeAffects(aReferenceMesh, aInstanceGroupMatricies);
-	attributeAffects(aNormalOffset, aInstanceGroupMatricies);
-	attributeAffects(aTranslateOffset, aInstanceGroupMatricies);
-	attributeAffects(aRotationOffset, aInstanceGroupMatricies);
-	attributeAffects(aScaleOffset, aInstanceGroupMatricies);
-	attributeAffects(aNormalRandom, aInstanceGroupMatricies);
-	attributeAffects(aTranslateRandom, aInstanceGroupMatricies);
-	attributeAffects(aRotationRandom, aInstanceGroupMatricies);
-	attributeAffects(aScaleRandom, aInstanceGroupMatricies);
-	*/
-
-	
 
 
 	return MS::kSuccess;
@@ -176,7 +148,7 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 {
 	MStatus status;
 
-	MGlobal::displayInfo("SET DEPENDENTS DIRTY CALLED!!!");
+	//MGlobal::displayInfo("SET DEPENDENTS DIRTY CALLED!!!"); //DEBUGGING
 
 	if (plug == aInstanceMesh)
 	{
@@ -186,9 +158,9 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 	{
 		attributeDirty_[kReferenceMesh] = true;
 	}
-	else if (plug == aNormalOffset || plug.parent() == aTranslateOffset || 
-			 plug.parent() == aRotationOffset || plug.parent() == aScaleOffset ||
-			 plug == aUniformScaleOffset)
+	else if (plug == aNormalOffset || plug.parent() == aTranslate ||
+			 plug.parent() == aRotate || plug.parent() == aScaleOffset ||
+			 plug == aUniformScale)
 	{
 		attributeDirty_[kOffsets] = true;
 	}
@@ -197,6 +169,10 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 			 plug == aUniformScaleRandom || plug == aNodeSeed)
 	{
 		attributeDirty_[kRandoms] = true;
+	}
+	else if (plug == aAlignToNormals)
+	{
+		attributeDirty_[kAlignment] = true;
 	}
 
 	setDependentsDirtyCalled_ = true;
@@ -212,7 +188,7 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 		return MS::kUnknownParameter;
 	}
 
-	MGlobal::displayInfo("COMPUTE CALLED!!!");
+	//MGlobal::displayInfo("COMPUTE CALLED!!!"); //DEBUGGING
 
 	//Supporting Timeline Playback
 	MAnimControl anim;
@@ -220,10 +196,11 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 	if (curTime != prevTime_)
 	{
 		prevTime_ = curTime;
-		MGlobal::displayInfo("Time Is Different");
+		//MGlobal::displayInfo("Time Is Different"); //DEBUGGING
 		if (setDependentsDirtyCalled_ == false)
 		{
-			MGlobal::displayInfo("setDepDirty not Called");
+			//MGlobal::displayInfo("setDepDirty not Called"); //DEBUGGING
+
 			dlManualSetDependentsDirty(data);
 		}
 	}
@@ -239,12 +216,12 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 
 	if (attributeDirty_[kInstanceMesh] == true)
 	{
-		MGlobal::displayInfo("Instance Mesh");
+		//MGlobal::displayInfo("Instance Mesh"); //DEBUGGING
 		MObject instanceMesh = data.inputValue(DLInstancer::aInstanceMesh, &status).asMesh();
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
 
-		status = dlGetMeshData(instanceMesh, inputInstanceMeshData_);
+		status = dlGetMeshData(instanceMesh, inputMeshData_);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
 		attributeDirty_[kInstanceMesh] = false;
@@ -253,7 +230,7 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 
 	if (attributeDirty_[kReferenceMesh] == true)
 	{
-		MGlobal::displayInfo("Reference Mesh");
+		//MGlobal::displayInfo("Reference Mesh"); //DEBUGGING
 		MObject referenceMesh = data.inputValue(DLInstancer::aReferenceMesh, &status).asMesh();
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
@@ -292,12 +269,12 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 
 	if (attributeDirty_[kOffsets] == true)
 	{
-		MGlobal::displayInfo("Offsets");
+		//MGlobal::displayInfo("Offsets"); //DEBUGGING
 
 		float normalOffset = data.inputValue(DLInstancer::aNormalOffset, &status).asFloat();
-		float3& translateOffset = data.inputValue(DLInstancer::aTranslateOffset, &status).asFloat3();
-		float3& rotationOffset = data.inputValue(DLInstancer::aRotationOffset, &status).asFloat3();
-		float uniformScaleOffset = data.inputValue(DLInstancer::aUniformScaleOffset, &status).asFloat();
+		float3& translateOffset = data.inputValue(DLInstancer::aTranslate, &status).asFloat3();
+		float3& rotationOffset = data.inputValue(DLInstancer::aRotate, &status).asFloat3();
+		float uniformScaleOffset = data.inputValue(DLInstancer::aUniformScale, &status).asFloat();
 		float3& scaleOffset = data.inputValue(DLInstancer::aScaleOffset, &status).asFloat3();
 
 		transformData_.normalOffset = normalOffset;
@@ -312,12 +289,13 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 
 	if (attributeDirty_[kRandoms] == true || transformData_.normalRandom.length() != numInstances_)
 	{
+		//MGlobal::displayInfo("Randoms"); //DEBUGGING
+
 		int seed = data.inputValue(DLInstancer::aNodeSeed).asInt();
 		float maxNormalRandom = data.inputValue(DLInstancer::aNormalRandom, &status).asFloat();
 		float3& maxTranslateRandom = data.inputValue(DLInstancer::aTranslateRandom, &status).asFloat3();
 		float3& maxRotationRandom = data.inputValue(DLInstancer::aRotationRandom, &status).asFloat3();
 		float maxUniformScaleRandom = data.inputValue(DLInstancer::aUniformScaleRandom, &status).asFloat();
-		//float maxUniformScaleRandom = data.inputValue(DLInstancer::aUniformScaleOffset, &status).asFloat();
 		float3& maxScaleRandom = data.inputValue(DLInstancer::aScaleRandom, &status).asFloat3();
 
 		float normalRandom;
@@ -334,11 +312,11 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 
 		for (unsigned int i = 0; i < numInstances_; ++i)
 		{
-			normalRandom = dlGenerateRandomValues((seed + i), maxNormalRandom, kNormal);
-			translateRandom = dlGenerateRandomValues((seed + i), maxTranslateRandom, kTranslate);
-			rotationRandom = dlGenerateRandomValues((seed + i), maxRotationRandom, kRotate);
-			uniformScaleRandom = dlGenerateRandomValues((seed + i), maxUniformScaleRandom, kScale);
-			scaleRandom = dlGenerateRandomValues((seed + i), maxScaleRandom, kScale);
+			normalRandom = DLCommon::dlGenerateRandomValues((seed + i), maxNormalRandom, DLCommon::kNormal);
+			translateRandom = DLCommon::dlGenerateRandomValues((seed + i), maxTranslateRandom, DLCommon::kTranslate);
+			rotationRandom = DLCommon::dlGenerateRandomValues((seed + i), maxRotationRandom, DLCommon::kRotate);
+			uniformScaleRandom = DLCommon::dlGenerateRandomValues((seed + i), maxUniformScaleRandom, DLCommon::kScale);
+			scaleRandom = DLCommon::dlGenerateRandomValues((seed + i), maxScaleRandom, DLCommon::kScale);
 
 			transformData_.normalRandom.append(normalRandom);
 			transformData_.translateRandom.append(translateRandom);
@@ -355,18 +333,22 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 
 	if (recreateOutMesh == true)
 	{
-		MGlobal::displayInfo("Recreate Mesh");
-		status = dlCreateOutputMeshData(inputInstanceMeshData_, numInstances_, outputInstanceMeshData_);
-		MObject generatedMesh = dlCreateMesh(outputInstanceMeshData_);
+		//MGlobal::displayInfo("Recreate Mesh"); //DEBUGGING
+
+		status = dlCreateOutputMeshData(inputMeshData_, numInstances_, outputMeshData_);
+		MObject generatedMesh = dlCreateMesh(outputMeshData_);
 		hGeneratedMesh.set(generatedMesh);
 	}
 
-	if (recreateMatricies == true)
+		
+	if (recreateMatricies == true || attributeDirty_[kAlignment] == true)
 	{
-		MGlobal::displayInfo("Recreate Matricies");
+		//MGlobal::displayInfo("Recreate Matricies"); //DEBUGGING
+		bool alignToNormals = data.inputValue(DLInstancer::aAlignToNormals).asBool();
 		//create new Matricies
 		ouputTransformMatricies_.clear();
-		ouputTransformMatricies_ = glGenerateInstanceDeformMatricies(transformData_);
+		ouputTransformMatricies_ = dlGenerateInstanceDeformMatricies(transformData_, alignToNormals);
+		attributeDirty_[kAlignment] = false;
 	}
 
 
@@ -398,14 +380,14 @@ MStatus DLInstancer::dlManualSetDependentsDirty(MDataBlock& data)
 		MPlug plug(thisMObject(), aNormalOffset);
 		setDependentsDirty(plug, plugArray);
 	}
-	if (!data.isClean(aTranslateOffset))
+	if (!data.isClean(aTranslate))
 	{
-		MPlug plug(thisMObject(), aTranslateOffset);
+		MPlug plug(thisMObject(), aTranslate);
 		setDependentsDirty(plug, plugArray);
 	}
-	if (!data.isClean(aRotationOffset))
+	if (!data.isClean(aRotate))
 	{
-		MPlug plug(thisMObject(), aRotationOffset);
+		MPlug plug(thisMObject(), aRotate);
 		setDependentsDirty(plug, plugArray);
 	}
 	if (!data.isClean(aScaleOffset))
@@ -449,67 +431,82 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 	meshData.pointArray.clear();
 	meshData.polyCounts.clear();
 	meshData.polyConnects.clear();
+	meshData.edgeSmoothing.clear();
 	meshData.uArray.clear();
 	meshData.vArray.clear();
-	meshData.uvIDs.clear();
 	meshData.uvCounts.clear();
+	meshData.uvIDs.clear();
+
 
 
 	MFnMesh fnMesh(mesh, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 	MItMeshPolygon itPoly(mesh, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
+	MObject meshCopy(mesh);
+	MItMeshEdge itEdge(meshCopy, &status);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
 	MItMeshFaceVertex itFaceVert(mesh, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	meshData.numPoints = fnMesh.numVertices();
+	numInstanceMeshPoints_ = fnMesh.numVertices();
 	meshData.numPolys = fnMesh.numPolygons();
 	status = fnMesh.getPoints(meshData.pointArray, MSpace::kWorld);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
-	//SORT OUT NORMALS
-	status = fnMesh.getVertexNormals(false, meshData.normals, MSpace::kWorld);
-	CHECK_MSTATUS_AND_RETURN_IT(status);
+	
 
-	MString map = "map1";
+	for (; !itEdge.isDone(); itEdge.next())
+	{
+		meshData.edgeSmoothing.push_back(itEdge.isSmooth());
+	}
+	
+
+	MStringArray uvSets;
+	fnMesh.getUVSetNames(uvSets);
+	MString map = uvSets[0];
 	status = fnMesh.getUVs(meshData.uArray, meshData.vArray, &map);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
+	MString tempString;
+	tempString = meshData.uArray.length();
+	MGlobal::displayInfo(tempString);
+
 	for (; !itPoly.isDone(); itPoly.next())
 	{
-		int numVerts = itPoly.polygonVertexCount(&status);
+		int numPolyVerts = itPoly.polygonVertexCount(&status);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
-		status = meshData.polyCounts.append(numVerts);
+		status = meshData.polyCounts.append(numPolyVerts);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
-		MIntArray vertIDs;
-		status = itPoly.getVertices(vertIDs);
+		MIntArray polyVertIDs;
+		status = itPoly.getVertices(polyVertIDs);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
-		for (unsigned int i = 0; i < vertIDs.length(); ++i)
+		for (unsigned int i = 0; i < polyVertIDs.length(); ++i)
 		{
+			status = meshData.polyConnects.append(polyVertIDs[i]);
 			CHECK_MSTATUS_AND_RETURN_IT(status);
-			status = meshData.polyConnects.append(vertIDs[i]);
 		}
 
-		MFloatArray tempUV;
-		status = itPoly.getUVs(tempUV, tempUV);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-		status = meshData.uvCounts.append( tempUV.length() );
+		MFloatArray tempUArray;
+		MFloatArray tempVArray;
+		status = itPoly.getUVs(tempUArray, tempVArray, &map);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
+		meshData.uvCounts.append(tempUArray.length());	
 	}
+
+
+
+
 
 	for (; !itFaceVert.isDone(); itFaceVert.next())
 	{
-		int uvID;
-		MString map = "map1";
-		status = itFaceVert.getUVIndex(uvID, &map);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-
-		status = meshData.uvIDs.append(uvID);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
+		int index;
+		itFaceVert.getUVIndex(index, &map);
+		meshData.uvIDs.append(index);
 	}
-
 
 	return MS::kSuccess;
 }
@@ -523,13 +520,14 @@ MStatus DLInstancer::dlCreateOutputMeshData(const DLMeshData & inMeshData, unsig
 		outMeshData.pointArray.clear();
 		outMeshData.polyCounts.clear();
 		outMeshData.polyConnects.clear();
+		outMeshData.edgeSmoothing.clear();
 		outMeshData.uArray.clear();
 		outMeshData.vArray.clear();
 		outMeshData.uvIDs.clear();
 		outMeshData.uvCounts.clear();
 	}
 
-	numInstanceMeshPoints_ = inMeshData.numPoints;
+	
 	outMeshData.numPoints = inMeshData.numPoints * numCopies;
 	outMeshData.numPolys = inMeshData.numPolys * numCopies;
 
@@ -549,11 +547,30 @@ MObject DLInstancer::dlCreateMesh(const DLMeshData& meshData)
 	MObject dataWrapper = dataFn.create();
 	MFnMesh generator;
 
-	MObject outMesh = generator.create(meshData.numPoints, meshData.numPolys, 
-		meshData.pointArray, meshData.polyCounts, meshData.polyConnects, 
-		meshData.uArray, meshData.vArray, dataWrapper, &status);
-
 	
+
+	MObject outMesh = generator.create(meshData.numPoints, meshData.numPolys, 
+									   meshData.pointArray, meshData.polyCounts, 
+									   meshData.polyConnects, meshData.uArray, 
+									   meshData.vArray, dataWrapper, &status);
+
+	MItMeshEdge itEdge(dataWrapper);
+
+	for (; !itEdge.isDone(); itEdge.next())
+	{
+		itEdge.setSmoothing(meshData.edgeSmoothing[itEdge.index()]);
+	}
+
+	MFnMesh fnOutMesh(dataWrapper);
+	MString map = "map1";
+	status = fnOutMesh.assignUVs(meshData.uvCounts, meshData.uvIDs, &map);
+	if (status != MS::kSuccess)
+	{
+		MGlobal::displayError(status.errorString());
+		MGlobal::displayError("Problem Assigning UVs");
+	}
+
+
 	if (status != MS::kSuccess)
 	{
 		MGlobal::displayError(status.errorString());
@@ -561,17 +578,6 @@ MObject DLInstancer::dlCreateMesh(const DLMeshData& meshData)
 		MFnMeshData fnNullMesh;
 		return fnNullMesh.create();
 	}
-
-	MFnMesh fnOutMesh(dataWrapper);
-
-	MString map = "map1";
-	fnOutMesh.assignUVs(meshData.uvCounts, meshData.uvIDs, &map);
-	if (status != MS::kSuccess)
-	{
-		MGlobal::displayError(status.errorString());
-		MGlobal::displayError("Problem Assigning UVs");
-	}
-
 
 	return dataWrapper;
 }
@@ -622,13 +628,13 @@ MMatrix DLInstancer::dlGenerateNormalAlignmentMatrix(MVector direction)
 	return matrix;
 }
 
-MMatrixArray DLInstancer::glGenerateInstanceDeformMatricies(const DLTransformData& transformData)
+MMatrixArray DLInstancer::dlGenerateInstanceDeformMatricies(const DLTransformData& transformData, bool alignNormals)
 {
 	MStatus status;
 
 	MMatrixArray outMatrixArray;
-	MMatrixArray normalMatricies = transformData_.normalAlignmentMatricies;
 
+	MMatrixArray normalMatricies = transformData_.normalAlignmentMatricies;
 
 	MPointArray points = transformData.referencePoints;
 	MFloatVectorArray normals = transformData.referenceNormals;
@@ -649,11 +655,22 @@ MMatrixArray DLInstancer::glGenerateInstanceDeformMatricies(const DLTransformDat
 
 	for (unsigned int i = 0; i < numInstances_; ++i)
 	{
-		MTransformationMatrix transformMatrix(normalMatricies[i]);
+		MTransformationMatrix transformMatrix;
 
-		double3 scale = { (scaleOffset[0] + scaleRandom[i].x + uniformScaleOffset + uniformScaleRandom[i]),
-						  (scaleOffset[1] + scaleRandom[i].y + uniformScaleOffset + uniformScaleRandom[i]),
-						  (scaleOffset[2] + scaleRandom[i].z + uniformScaleOffset + uniformScaleRandom[i]) };
+		if (alignNormals)
+		{
+			transformMatrix = normalMatricies[i];
+		}
+		else
+		{
+			transformMatrix = MTransformationMatrix::identity;
+		}
+
+		MVector uniSclOff({ uniformScaleOffset , uniformScaleOffset , uniformScaleOffset });
+		MVector uniSclRnd({ uniformScaleRandom[i] , uniformScaleRandom[i] , uniformScaleRandom[i] });
+
+		MVector scaleVec(scaleOffset + scaleRandom[i] + uniSclOff + uniSclRnd);
+		double3 scale = { scaleVec.x, scaleVec.y, scaleVec.z };
 
 		for (int i = 0; i < 3; ++i)
 		{
@@ -661,23 +678,21 @@ MMatrixArray DLInstancer::glGenerateInstanceDeformMatricies(const DLTransformDat
 		}
 
 		status = transformMatrix.setScale(scale, MSpace::kWorld);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-
-		double3 rotation = { (rotationOffset[0] + rotationRandom[i].x),
-							 (rotationOffset[1] + rotationRandom[i].y),
-							 (rotationOffset[2] + rotationRandom[i].z) };
+		
+		MVector rotationVec(rotationOffset + rotationRandom[i]);
+		double3 rotation = { rotationVec.x, rotationVec.y,rotationVec.z };
 		status = transformMatrix.addRotation(rotation, MTransformationMatrix::kXYZ, MSpace::kTransform);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
+		
 
 
-		MVector normal = normals[i] * (normalOffset + normalRandom[i]);
-		MVector translation(points[i] + translateOffset + normal + translateRandom[i]);
+		MVector normalTranslation = normals[i] * (normalOffset + normalRandom[i]);
+		MVector translation(points[i] + translateOffset + normalTranslation + translateRandom[i]);
 		status = transformMatrix.setTranslation(translation, MSpace::kWorld);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
+		
 
 		MMatrix outMatrix(transformMatrix.asMatrix());
 		status = outMatrixArray.append(outMatrix);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
+		
 
 	}
 	return outMatrixArray;
