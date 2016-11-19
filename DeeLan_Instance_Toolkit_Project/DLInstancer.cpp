@@ -469,6 +469,9 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 	status = fnMesh.getUVs(meshData.uArray, meshData.vArray, &map);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
+
+	fnMesh.getAssignedUVs(meshData.uvCounts, meshData.uvIDs, &map);
+
 	MString tempString;
 	tempString = meshData.uArray.length();
 	MGlobal::displayInfo(tempString);
@@ -488,26 +491,7 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 			status = meshData.polyConnects.append(polyVertIDs[i]);
 			CHECK_MSTATUS_AND_RETURN_IT(status);
 		}
-
-		MFloatArray tempUArray;
-		MFloatArray tempVArray;
-		status = itPoly.getUVs(tempUArray, tempVArray, &map);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-
-		meshData.uvCounts.append(tempUArray.length());	
 	}
-
-
-
-
-
-	for (; !itFaceVert.isDone(); itFaceVert.next())
-	{
-		int index;
-		itFaceVert.getUVIndex(index, &map);
-		meshData.uvIDs.append(index);
-	}
-
 	return MS::kSuccess;
 }
 
