@@ -24,6 +24,8 @@
 #include <maya/MTransformationMatrix.h>
 #include <maya/MTime.h>
 #include <maya/MAnimControl.h>
+#include <maya/MFloatMatrix.h>
+
 
 #include <map>
 #include <vector>
@@ -61,27 +63,35 @@ public:
 
 
 	enum attrs
-	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms, kAlignment };
+	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms, kAlignment, kTransMatrix,};
 
 	//Name and ID
 	static MTypeId id;
 	static const MString nodeName;
 
 	//Input Attributes
+	static MObject aInstanceObject;
 	static MObject aInstanceMesh;
+	static MObject aInstanceMatrix;
+	static MObject aReferenceObject;
 	static MObject aReferenceMesh;
+	static MObject aReferenceMatrix;
+
 	static MObject aAlignToNormals;
+
 	static MObject aNormalOffset;
 	static MObject aTranslate;
 	static MObject aRotate;
 	static MObject aUniformScale;
 	static MObject aScaleOffset;
+
 	static MObject aNormalRandom;
 	static MObject aTranslateRandom;
 	static MObject aRotationRandom;
 	static MObject aUniformScaleRandom;
 	static MObject aScaleRandom;
 	static MObject aNodeSeed;
+
 	static MObject aGeneratedMesh;
 
 	//Output Attributes
@@ -92,6 +102,8 @@ private:
 	DLMeshData inputMeshData_;
 	DLMeshData outputMeshData_;
 	DLTransformData transformData_;
+	MTransformationMatrix instanceMatrix_;
+	MMatrix referenceMatrix_;
 	MMatrixArray ouputTransformMatricies_;
 	unsigned int numInstances_;
 	unsigned int numInstanceMeshPoints_;
