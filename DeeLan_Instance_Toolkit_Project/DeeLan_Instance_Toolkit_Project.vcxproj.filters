@@ -27,6 +27,9 @@
     <ClCompile Include="DLInstancer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DLCreateInstancerCmd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DLCustomDataTypes.h">
@@ -36,6 +39,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DLInstancer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DLCreateInstancerCmd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -20,12 +20,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DLCommon.cpp" />
+    <ClCompile Include="DLCreateInstancerCmd.cpp" />
     <ClCompile Include="DLCustomDataTypes.cpp" />
     <ClCompile Include="DLInstancer.cpp" />
     <ClCompile Include="pluginMain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DLCommon.h" />
+    <ClInclude Include="DLCreateInstancerCmd.h" />
     <ClInclude Include="DLCustomDataTypes.h" />
     <ClInclude Include="DLInstancer.h" />
   </ItemGroup>

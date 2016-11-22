@@ -70,6 +70,7 @@ MStatus DLInstancer::initialize()
 
 	aInstanceMatrix = mAttr.create("instanceMatrix", "iMatrix");
 	mAttr.setDefault(MMatrix::identity);
+	//mAttr.setDisconnectBehavior(MFnAttribute::kReset)
 
 	cAttr.addChild(aInstanceMesh);
 	cAttr.addChild(aInstanceMatrix);
@@ -88,6 +89,7 @@ MStatus DLInstancer::initialize()
 
 	aReferenceMatrix = mAttr.create("referenceMatrix", "rMatrix");
 	mAttr.setDefault(MMatrix::identity);
+	//mAttr.setDisconnectBehavior(MFnAttribute::kReset)
 
 	cAttr.addChild(aReferenceMesh);
 	cAttr.addChild(aReferenceMatrix);
