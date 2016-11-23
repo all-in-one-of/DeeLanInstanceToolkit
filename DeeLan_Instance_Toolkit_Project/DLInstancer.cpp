@@ -262,8 +262,16 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 		MObject instanceMesh = data.inputValue(DLInstancer::aInstanceMesh, &status).asMesh();
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
+
+
+
+
 		status = dlGetMeshData(instanceMesh, inputMeshData_);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+
+
+
 
 		attributeDirty_[kInstanceMesh] = false;
 		recreateOutMesh = true;
@@ -274,6 +282,10 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 		//MGlobal::displayInfo("Reference Mesh"); //DEBUGGING
 		MObject referenceMesh = data.inputValue(DLInstancer::aReferenceMesh, &status).asMesh();
 		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+
+
+
 
 		MFnMesh fnRefMesh(referenceMesh);
 		MPointArray points;
@@ -304,6 +316,9 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 			transformData_.normalAlignmentMatricies.append(alignMatrix);
 
 		}
+
+
+
 		//calculate normal rotations and store in transform data
 		attributeDirty_[kReferenceMesh] = false;
 		recreateMatricies = true;
@@ -312,6 +327,9 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 	if (attributeDirty_[kOffsets] == true)
 	{
 		//MGlobal::displayInfo("Offsets"); //DEBUGGING
+
+
+
 
 		float normalOffset = data.inputValue(DLInstancer::aNormalOffset, &status).asFloat();
 		float3& translateOffset = data.inputValue(DLInstancer::aTranslate, &status).asFloat3();
@@ -325,6 +343,10 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 		transformData_.uniformScaleOffset = uniformScaleOffset;
 		transformData_.scaleOffset = scaleOffset;
 
+
+
+
+
 		attributeDirty_[kOffsets] = false;
 		recreateMatricies = true;
 	}
@@ -332,6 +354,9 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 	if (attributeDirty_[kRandoms] == true || transformData_.normalRandom.length() != numInstances_)
 	{
 		//MGlobal::displayInfo("Randoms"); //DEBUGGING
+
+
+
 
 		int seed = data.inputValue(DLInstancer::aNodeSeed).asInt();
 		float maxNormalRandom = data.inputValue(DLInstancer::aNormalRandom, &status).asFloat();
@@ -368,24 +393,39 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 
 		}
 		
+
+
+
+
 		attributeDirty_[kRandoms] = false;
 		recreateMatricies = true;
 	}
 
 
+	
+
 	if (recreateOutMesh == true)
 	{
 		//MGlobal::displayInfo("Recreate Mesh"); //DEBUGGING
 
+
+
+
 		status = dlCreateOutputMeshData(inputMeshData_, numInstances_, outputMeshData_);
 		MObject generatedMesh = dlCreateMesh(outputMeshData_);
 		hGeneratedMesh.set(generatedMesh);
+
+
+
 	}
 
 		
 	if (recreateMatricies == true || attributeDirty_[kAlignment] == true || 
 									 attributeDirty_[kTransMatrix] == true)
 	{
+
+
+
 		//MGlobal::displayInfo("Recreate Matricies"); //DEBUGGING
 		bool alignToNormals = data.inputValue(DLInstancer::aAlignToNormals).asBool();
 		instanceMatrix_ = data.inputValue(DLInstancer::aInstanceMatrix, &status).asMatrix();
@@ -396,15 +436,21 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 		//create new Matricies
 		ouputTransformMatricies_.clear();
 		ouputTransformMatricies_ = dlGenerateInstanceDeformMatricies(transformData_, alignToNormals);
+
+
+
+
 		attributeDirty_[kAlignment] = false;
 		attributeDirty_[kTransMatrix] = false;
 	}
 
 
+
 	//Deform Out Mesh
 	hOutput.set(hGeneratedMesh.asMesh());
 	dlDeformMesh(hOutput, ouputTransformMatricies_);
-	
+
+
 	data.setClean(plug);
 	return MS::kSuccess;
 }
@@ -547,6 +593,10 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 
 MStatus DLInstancer::dlCreateOutputMeshData(const DLMeshData & inMeshData, unsigned int numCopies, DLMeshData & outMeshData, bool clearData)
 {
+	MTimer dlCreateOutputMeshDataTimer; //PERFORMANCE TIMING //
+	dlCreateOutputMeshDataTimer.beginTimer(); //PERFORMANCE TIMING //
+
+
 	MStatus status;
 
 	if (clearData)
@@ -567,26 +617,56 @@ MStatus DLInstancer::dlCreateOutputMeshData(const DLMeshData & inMeshData, unsig
 
 	for (unsigned int i = 0; i < numCopies; ++i)
 	{
+
+		MTimer appendArrayDataTimer; //PERFORMANCE TIMING //
+		appendArrayDataTimer.beginTimer(); //PERFORMANCE TIMING //
+
+
 		outMeshData.appendArrayData(inMeshData);
+
+		appendArrayDataTimer.endTimer(); //PERFORMANCE TIMING //
+		MString tempString2("appendArrayData COMPUTE TIME: "); //PERFORMANCE TIMING //
+		tempString2 += appendArrayDataTimer.elapsedTime(); //PERFORMANCE TIMING //
+		MGlobal::displayInfo(tempString2); //PERFORMANCE TIMING //
 		
 	}
+
+	dlCreateOutputMeshDataTimer.endTimer(); //PERFORMANCE TIMING //
+	MString tempString("dlCreateOutputMeshData COMPUTE TIME: "); //PERFORMANCE TIMING //
+	tempString += dlCreateOutputMeshDataTimer.elapsedTime(); //PERFORMANCE TIMING //
+	MGlobal::displayInfo(tempString); //PERFORMANCE TIMING //
 
 	return MS::kSuccess;
 }
 
 MObject DLInstancer::dlCreateMesh(const DLMeshData& meshData)
 {
+
+	MTimer dlCreateMeshTimer; //PERFORMANCE TIMING //
+	dlCreateMeshTimer.beginTimer(); //PERFORMANCE TIMING //
+
+
 	MStatus status;
 	MFnMeshData  dataFn;
 	MObject dataWrapper = dataFn.create();
 	MFnMesh generator;
 
 	
+	MTimer generateMeshTimer; //PERFORMANCE TIMING //
+	generateMeshTimer.beginTimer(); //PERFORMANCE TIMING //
+
 
 	MObject outMesh = generator.create(meshData.numPoints, meshData.numPolys, 
 									   meshData.pointArray, meshData.polyCounts, 
 									   meshData.polyConnects, meshData.uArray, 
 									   meshData.vArray, dataWrapper, &status);
+
+
+	generateMeshTimer.endTimer(); //PERFORMANCE TIMING //
+	MString tempString2("generateMesh COMPUTE TIME: "); //PERFORMANCE TIMING //
+	tempString2 += generateMeshTimer.elapsedTime(); //PERFORMANCE TIMING //
+	MGlobal::displayInfo(tempString2); //PERFORMANCE TIMING //
+
 
 	MItMeshEdge itEdge(dataWrapper);
 
@@ -612,6 +692,13 @@ MObject DLInstancer::dlCreateMesh(const DLMeshData& meshData)
 		MFnMeshData fnNullMesh;
 		return fnNullMesh.create();
 	}
+
+
+	dlCreateMeshTimer.endTimer(); //PERFORMANCE TIMING //
+	MString tempString("dlCreateMesh COMPUTE TIME: "); //PERFORMANCE TIMING //
+	tempString += dlCreateMeshTimer.elapsedTime(); //PERFORMANCE TIMING //
+	MGlobal::displayInfo(tempString); //PERFORMANCE TIMING //
+
 
 	return dataWrapper;
 }

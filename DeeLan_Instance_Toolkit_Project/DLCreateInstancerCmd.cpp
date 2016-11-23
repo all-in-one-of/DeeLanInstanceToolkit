@@ -60,7 +60,30 @@ MStatus DLCreateInstancerCmd::doIt(const MArgList & args)
 	}
 	else
 	{
-		selectionList_;
+		MDagPath instanceMeshPath;
+		MDagPath referenceMeshPath;
+
+		selectionList_.getDagPath(0, instanceMeshPath);
+		selectionList_.getDagPath(1, referenceMeshPath);
+
+		if (dlIsShapeNode(instanceMeshPath))
+		{
+			instanceMeshPath.pop();
+		}
+
+		if (dlIsShapeNode(referenceMeshPath))
+		{
+			referenceMeshPath.pop();
+		}
+
+		status = dlGetShapeNode_(instanceMeshPath);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+		status = dlGetShapeNode_(referenceMeshPath);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+		instanceMesh_ = instanceMeshPath.node();
+		referenceMesh_ = referenceMeshPath.node();
+
 	}
 
 
@@ -202,5 +225,38 @@ bool DLCreateInstancerCmd::dlIsShapeNode(const MDagPath & path)
 
 MStatus DLCreateInstancerCmd::dlGetShapeNode_(MDagPath & path, bool intermediate)
 {
-	return MStatus();
+	MStatus status;
+
+	bool suitableShapeFound;
+	unsigned int numShapes;
+	path.numberOfShapesDirectlyBelow(numShapes);
+
+	for (unsigned int i = 0; i < numShapes; ++i)
+	{
+		path.extendToShapeDirectlyBelow(i);
+		MFnDagNode node(path);
+		if (node.isIntermediateObject() == intermediate)
+		{
+			suitableShapeFound = true;
+			break;
+		}
+		path.pop();
+	}
+
+	if (suitableShapeFound)
+	{
+		return MS::kSuccess;
+	}
+	else
+	{
+		if (!intermediate)
+		{
+			MGlobal::displayError("NO SHAPE FOUND");
+		}
+		else
+		{
+			MGlobal::displayError("NO INTERMEDIATE SHAPES FOUND");
+		}
+		return MS::kFailure;
+	}
 }

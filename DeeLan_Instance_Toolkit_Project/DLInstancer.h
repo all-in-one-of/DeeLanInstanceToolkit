@@ -25,6 +25,8 @@
 #include <maya/MTime.h>
 #include <maya/MAnimControl.h>
 #include <maya/MFloatMatrix.h>
+#include <maya/MString.h>
+#include <maya/MTimer.h>
 
 
 #include <map>
