@@ -6,6 +6,7 @@
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnCompoundAttribute.h>
 #include <maya/MFnMatrixAttribute.h>
+#include <maya/MFnMessageAttribute.h>
 #include <maya/MPlug.h>
 #include <maya/MDataBlock.h>
 #include <maya/MPointArray.h>
@@ -72,7 +73,10 @@ public:
 	static const MString nodeName;
 
 	//Input Attributes
+	static MObject aOutputMeshNodeMessage;
+
 	static MObject aInstanceObject;
+	static MObject aInstanceMessage;
 	static MObject aInstanceMesh;
 	static MObject aInstanceMatrix;
 	static MObject aReferenceObject;

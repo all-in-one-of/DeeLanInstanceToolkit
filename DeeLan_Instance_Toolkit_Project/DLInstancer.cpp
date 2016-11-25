@@ -5,7 +5,10 @@ MTypeId DLInstancer::id(0x00000023);
 const MString DLInstancer::nodeName = "dlInstancer";
 
 //Input Attributes
+MObject DLInstancer::aOutputMeshNodeMessage;
+
 MObject DLInstancer::aInstanceObject;
+MObject DLInstancer::aInstanceMessage;
 MObject DLInstancer::aInstanceMesh;
 MObject DLInstancer::aInstanceMatrix;
 MObject DLInstancer::aReferenceObject;
@@ -55,6 +58,7 @@ MStatus DLInstancer::initialize()
 	MFnTypedAttribute tAttr;
 	MFnCompoundAttribute cAttr;
 	MFnMatrixAttribute mAttr;
+	MFnMessageAttribute msgAttr;
 
 	//Output Attributes
 	aOutMesh = tAttr.create("outMesh", "oMesh", MFnData::kMesh);
@@ -63,7 +67,15 @@ MStatus DLInstancer::initialize()
 	addAttribute(aOutMesh);
 
 	//Input Attributes
+	aOutputMeshNodeMessage = msgAttr.create("outputMeshNode", "outMeshNode");
+	addAttribute(aOutputMeshNodeMessage);
+	attributeAffects(aOutputMeshNodeMessage, aOutMesh);
+
+
+
 	aInstanceObject = cAttr.create("instanceObject", "iObj");
+
+	aInstanceMessage = msgAttr.create("instanceMeshMessage", "instMeshMsg");
 
 	aInstanceMesh = tAttr.create("instanceMesh", "iMesh", MFnData::kMesh);
 	tAttr.setReadable(false);
@@ -72,10 +84,12 @@ MStatus DLInstancer::initialize()
 	mAttr.setDefault(MMatrix::identity);
 	//mAttr.setDisconnectBehavior(MFnAttribute::kReset)
 
+	cAttr.addChild(aInstanceMessage);
 	cAttr.addChild(aInstanceMesh);
 	cAttr.addChild(aInstanceMatrix);
 
 	addAttribute(aInstanceObject);
+	attributeAffects(aInstanceMesh, aOutMesh);
 	attributeAffects(aInstanceMesh, aOutMesh);
 	attributeAffects(aInstanceMatrix, aOutMesh);
 

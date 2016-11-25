@@ -8,6 +8,7 @@
 #include <maya/MString.h>
 #include <maya/MArgDatabase.h>
 #include <maya/MGlobal.h>
+#include <maya/MItDependencyNodes.h>
 
 #include "DLInstancer.h"
 
@@ -34,15 +35,16 @@ private:
 	MDagModifier dagMod_;
 	MObject instanceMesh_;
 	MObject referenceMesh_;
+	MObject initialShadingGroup_;
 	bool autoUVUpdates_;
 	bool autoMaterialUpdates_;
 	bool createBaseMeshes_;
 	MSelectionList selectionList_;
+	enum dlObjectType {kCube, kPlane, kNull};
 
 	// METHODS //
 	MStatus dlParseArgs_(const MArgList& args);
-	MObject dlCreateCube_();
-	MObject dlCreatePlane_();
+	MObject dlCreateObject_(dlObjectType type, MString& name2);
 	bool dlIsShapeNode(const MDagPath& path);
 	MStatus dlGetShapeNode_(MDagPath& path, bool intermediate = false);
 

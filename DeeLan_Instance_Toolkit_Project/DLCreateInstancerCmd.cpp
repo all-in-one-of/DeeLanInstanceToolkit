@@ -55,8 +55,19 @@ MStatus DLCreateInstancerCmd::doIt(const MArgList & args)
 
 	if (createBaseMeshes_)
 	{
-		instanceMesh_ = dlCreateCube_();
-		referenceMesh_ = dlCreatePlane_();
+		MItDependencyNodes itDepNodes(MFn::kShadingEngine);
+		for (; !itDepNodes.isDone(); itDepNodes.next())
+		{
+			MFnDependencyNode currentNode(itDepNodes.thisNode());
+			if (currentNode.name() == MString("initialShadingGroup"))
+			{
+				initialShadingGroup_ = itDepNodes.thisNode();
+				break;
+
+			}
+		}
+		instanceMesh_ = dlCreateObject_(kCube, MString("dlInstancerCube"));
+		referenceMesh_ = dlCreateObject_(kPlane, MString("dlInstancerPlane"));
 	}
 	else
 	{
@@ -89,39 +100,72 @@ MStatus DLCreateInstancerCmd::doIt(const MArgList & args)
 
 	// CONNECT INSTANCE AND REFERENCE MESHES TO INSTANCER NODE //
 	MObject instancerNode = dgMod_.createNode(DLInstancer::id);
+	MObject outputShape = dlCreateObject_(kNull, MString("dlInstancedObject"));
 
-	MPlug instMeshPlugOutMesh = MFnDagNode(instanceMesh_).findPlug("outMesh", false);
-	MPlug instMeshPlugWorldMatrix = MFnDagNode(instanceMesh_).findPlug("worldMatrix", false).elementByLogicalIndex(0, &status);
+	MFnDagNode instMeshDGNode(instanceMesh_);
+	MFnDagNode refMeshDGNode(referenceMesh_);
+	MFnDependencyNode instancerDGNode(instancerNode);
+	MFnDependencyNode outputShapeDGNode(outputShape);
 
-	MPlug nodePlugInstInMesh = MFnDependencyNode(instancerNode).findPlug(DLInstancer::aInstanceMesh, false);
-	MPlug nodePlugInstInMatrix = MFnDependencyNode(instancerNode).findPlug(DLInstancer::aInstanceMatrix, false);
+	MPlug instMeshPlugMessage = instMeshDGNode.findPlug("message", false);
+	MPlug instMeshPlugOutMesh = instMeshDGNode.findPlug("outMesh", false);
+	MPlug instMeshPlugWorldMatrix = instMeshDGNode.findPlug("worldMatrix", false).elementByLogicalIndex(0, &status);
 
+	MPlug nodePlugInstMeshMessage = instancerDGNode.findPlug(DLInstancer::aInstanceMessage, false);
+	MPlug nodePlugInstInMesh = instancerDGNode.findPlug(DLInstancer::aInstanceMesh, false);
+	MPlug nodePlugInstInMatrix = instancerDGNode.findPlug(DLInstancer::aInstanceMatrix, false);
+
+	dgMod_.connect(instMeshPlugMessage, nodePlugInstMeshMessage);
 	dgMod_.connect(instMeshPlugOutMesh, nodePlugInstInMesh);
 	dgMod_.connect(instMeshPlugWorldMatrix, nodePlugInstInMatrix);
 
 
 
-	MPlug refMeshPlugOutMesh = MFnDagNode(referenceMesh_).findPlug("outMesh", false);
-	MPlug refMeshPlugWorldMatrix = MFnDagNode(referenceMesh_).findPlug("worldMatrix", false).elementByLogicalIndex(0, &status);
+	MPlug refMeshPlugOutMesh = refMeshDGNode.findPlug("outMesh", false);
+	MPlug refMeshPlugWorldMatrix = refMeshDGNode.findPlug("worldMatrix", false).elementByLogicalIndex(0, &status);
 
-	MPlug nodePlugNodeInMesh = MFnDependencyNode(instancerNode).findPlug(DLInstancer::aReferenceMesh, false);
-	MPlug nodePlugNodeInMatrix = MFnDependencyNode(instancerNode).findPlug(DLInstancer::aReferenceMatrix, false);
+	MPlug nodePlugNodeInMesh = instancerDGNode.findPlug(DLInstancer::aReferenceMesh, false);
+	MPlug nodePlugNodeInMatrix = instancerDGNode.findPlug(DLInstancer::aReferenceMatrix, false);
 
 	dgMod_.connect(refMeshPlugOutMesh, nodePlugNodeInMesh);
 	status = dgMod_.connect(refMeshPlugWorldMatrix, nodePlugNodeInMatrix);
 
 
 	// CREATE AND CONNECT OUTPUT MESH SHAPE TO INSTANCER NODE //
-	MObject outputTransform = dagMod_.createNode(MString("transform"));
-	dagMod_.renameNode(outputTransform, "dlInstanceObject#");
-
-	MObject outputShape = dagMod_.createNode(MString("mesh"), outputTransform);
-	dagMod_.renameNode(outputShape, "dlInstanceObjectShape#");
-
-	MPlug instancerOutMesh = MFnDependencyNode(instancerNode).findPlug("outMesh", false);
-	MPlug outputShapeInMesh = MFnDependencyNode(outputShape).findPlug("inMesh", false);
-
+	
+	MPlug instancerOutMesh = instancerDGNode.findPlug("outMesh", false);
+	MPlug outputShapeInMesh = outputShapeDGNode.findPlug("inMesh", false);
 	dgMod_.connect(instancerOutMesh, outputShapeInMesh);
+
+	if (autoMaterialUpdates_ == true)
+	{
+		MPlug instancerOutputMeshMessage = instancerDGNode.findPlug(DLInstancer::aOutputMeshNodeMessage, false);
+		MPlug outputShapeMessage = outputShapeDGNode.findPlug("message", false);
+		dgMod_.connect(outputShapeMessage, instancerOutputMeshMessage);
+	}
+	else
+	{
+
+		//MGlobal::displayInfo("TEST");
+		MPlug outputMeshPlugInstObjGroups0 = outputShapeDGNode.findPlug("instObjGroups", false).elementByLogicalIndex(0 &status);
+		//MGlobal::displayInfo(status.errorString());
+		MPlug instanceMeshPlugInstObjGroups0 = instMeshDGNode.findPlug("instObjGroups", false).elementByLogicalIndex(0 & status);
+		//MGlobal::displayInfo(status.errorString());
+
+		MPlugArray connectedShadingPlugs;
+		instanceMeshPlugInstObjGroups0.connectedTo(connectedShadingPlugs, false, true);
+		MPlug instanceMeshShaderPlug = connectedShadingPlugs[0];
+		MPlug instanceMeshShaderPlugParent = instanceMeshShaderPlug.array();
+
+		MGlobal::displayInfo(instanceMeshShaderPlugParent.name());
+
+
+		unsigned int numConnectedMeshes = instanceMeshShaderPlugParent.numConnectedElements();
+		unsigned int nextFreePlugByLogicalIndex = instanceMeshShaderPlugParent.elementByPhysicalIndex(numConnectedMeshes).logicalIndex();
+		MPlug outputMeshShaderPlug = instanceMeshShaderPlugParent.elementByLogicalIndex(nextFreePlugByLogicalIndex);
+		dgMod_.connect(outputMeshPlugInstObjGroups0, outputMeshShaderPlug);
+
+	}
 
 	redoIt();
 	return MS::kSuccess;
@@ -179,42 +223,55 @@ MStatus DLCreateInstancerCmd::dlParseArgs_(const MArgList & args)
 	return MS::kSuccess;
 }
 
-MObject DLCreateInstancerCmd::dlCreateCube_()
+MObject DLCreateInstancerCmd::dlCreateObject_(dlObjectType type, MString & name)
 {
+	MString transformName = name + "#";;
+	MString shapeName = name + "Shape#";;
+	bool addObjectCreator;
+	MString creatorType;
 
-	MObject cubeTransform = dagMod_.createNode(MString("transform"));
-	dagMod_.renameNode(cubeTransform, "dlInstancerCube#");
+	if (type == kNull)
+	{
+		addObjectCreator = false;
+	}
+	else if (type == kCube)
+	{
+		addObjectCreator = true;
+		creatorType = "polyCube";
+	}
+	else if (type == kPlane)
+	{
+		addObjectCreator = true;
+		creatorType = "polyPlane";
+	}
 
-	MObject cubeShape = dagMod_.createNode(MString("mesh"), cubeTransform);
-	dagMod_.renameNode(cubeShape, "dlInstancerCubeShape#");
 
-	MObject cubeCreator = dgMod_.createNode(MString("polyCube"));
+	MObject transformNode = dagMod_.createNode(MString("transform"));
+	dagMod_.renameNode(transformNode, transformName);
 
-	MPlug cubeCreatorOutput = MFnDependencyNode(cubeCreator).findPlug("output", false);
-	MPlug cubeShapeInMesh = MFnDependencyNode(cubeShape).findPlug("inMesh", false);
+	MObject shapeNode = dagMod_.createNode(MString("mesh"), transformNode);
+	dagMod_.renameNode(shapeNode, shapeName);
 
-	dgMod_.connect(cubeCreatorOutput, cubeShapeInMesh);
+	if (addObjectCreator)
+	{
+		MStatus status;
+		MObject creatorNode = dgMod_.createNode(creatorType);
 
-	return cubeShape;
-}
+		MPlug creatorOutput = MFnDependencyNode(creatorNode).findPlug("output", false);
+		MPlug shapeInMesh = MFnDependencyNode(shapeNode).findPlug("inMesh", false);
 
-MObject DLCreateInstancerCmd::dlCreatePlane_()
-{
+		dgMod_.connect(creatorOutput, shapeInMesh);
 
-	MObject planeTransform = dagMod_.createNode(MString("transform"));
-	dagMod_.renameNode(planeTransform, "dlInstancerPlane#");
+		MPlug instObjGroupsIndex0 = MFnDependencyNode(shapeNode).findPlug("instObjGroups", false).elementByLogicalIndex(0);
+		MPlug dagSetMembersParent = MFnDependencyNode(initialShadingGroup_).findPlug("dagSetMembers", false);
+		unsigned int numConnectedMeshes = dagSetMembersParent.numConnectedElements();
+		unsigned int nextFreePlugByLogicalIndex = dagSetMembersParent.elementByPhysicalIndex(numConnectedMeshes).logicalIndex();
+		MPlug dagSetMembersParentChild = dagSetMembersParent.elementByLogicalIndex(nextFreePlugByLogicalIndex);
+		dgMod_.connect(instObjGroupsIndex0, dagSetMembersParentChild);
+	}
 
-	MObject planeShape = dagMod_.createNode(MString("mesh"), planeTransform);
-	dagMod_.renameNode(planeShape, "dlInstancerPlaneShape#");
-
-	MObject planeCreator = dgMod_.createNode(MString("polyPlane"));
-
-	MPlug planeCreatorOutput = MFnDependencyNode(planeCreator).findPlug("output", false);
-	MPlug planeShapeInMesh = MFnDependencyNode(planeShape).findPlug("inMesh", false);
-
-	dgMod_.connect(planeCreatorOutput, planeShapeInMesh);
-
-	return planeShape;
+	
+	return shapeNode;
 }
 
 bool DLCreateInstancerCmd::dlIsShapeNode(const MDagPath & path)
