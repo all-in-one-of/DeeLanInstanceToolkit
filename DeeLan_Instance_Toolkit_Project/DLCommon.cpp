@@ -58,3 +58,34 @@ MVector DLCommon::dlGenerateRandomValues(int inSeed, float3 maxDifference, DLRan
 	return outVec;
 }
 
+MStatus DLCommon::dlGetMaterialConnectionPlugs(const MFnDependencyNode& sourceNode, 
+												MPlug& currentMaterialPlug,  MPlug& nextAvailablePlug)
+{
+	MStatus status;
+
+	MPlug instObjGroupsIndex0 = sourceNode.findPlug("instObjGroups", false, &status).elementByLogicalIndex(0);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+
+	if (instObjGroupsIndex0.isConnected())
+	{
+		MPlugArray connectedPlugs;
+		instObjGroupsIndex0.connectedTo(connectedPlugs, false, true, &status);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+		if (connectedPlugs.length() != 0)
+		{
+			currentMaterialPlug = connectedPlugs[0];
+			MPlug shaderConnectionParent = currentMaterialPlug.array();
+
+			unsigned int numConnectedMeshes = shaderConnectionParent.numConnectedElements();
+			unsigned int nextFreePlugByLogicalIndex = shaderConnectionParent.elementByPhysicalIndex(numConnectedMeshes).logicalIndex();
+			nextAvailablePlug = shaderConnectionParent.elementByLogicalIndex(nextFreePlugByLogicalIndex);
+			return MS::kSuccess;
+
+		}
+	}
+	return MS::kFailure;
+}
+
+
+

@@ -29,7 +29,6 @@
 #include <maya/MString.h>
 #include <maya/MTimer.h>
 
-
 #include <map>
 #include <vector>
 
@@ -66,7 +65,7 @@ public:
 
 
 	enum attrs
-	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms, kAlignment, kTransMatrix,};
+	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms, kAlignment, kTransMatrix, kMessage};
 
 	//Name and ID
 	static MTypeId id;
@@ -113,6 +112,8 @@ private:
 	MMatrixArray ouputTransformMatricies_;
 	unsigned int numInstances_;
 	unsigned int numInstanceMeshPoints_;
+	bool updateMaterials_;
+	MPlug instanceMaterialPlug_;
 	std::map<attrs, bool> attributeDirty_;
 	MTime prevTime_;
 	bool setDependentsDirtyCalled_;

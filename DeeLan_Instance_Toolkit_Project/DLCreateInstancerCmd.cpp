@@ -55,17 +55,6 @@ MStatus DLCreateInstancerCmd::doIt(const MArgList & args)
 
 	if (createBaseMeshes_)
 	{
-		MItDependencyNodes itDepNodes(MFn::kShadingEngine);
-		for (; !itDepNodes.isDone(); itDepNodes.next())
-		{
-			MFnDependencyNode currentNode(itDepNodes.thisNode());
-			if (currentNode.name() == MString("initialShadingGroup"))
-			{
-				initialShadingGroup_ = itDepNodes.thisNode();
-				break;
-
-			}
-		}
 		instanceMesh_ = dlCreateObject_(kCube, MString("dlInstancerCube"));
 		referenceMesh_ = dlCreateObject_(kPlane, MString("dlInstancerPlane"));
 	}
@@ -139,6 +128,10 @@ MStatus DLCreateInstancerCmd::doIt(const MArgList & args)
 
 	if (autoMaterialUpdates_ == true)
 	{
+		MPlug instObjGroupsIndex0 = outputShapeDGNode.findPlug("instObjGroups", false).elementByLogicalIndex(0);
+		MPlug defaultShaderPlug = dlGetDefaultShaderPlug_();
+		dgMod_.connect(instObjGroupsIndex0, defaultShaderPlug);
+
 		MPlug instancerOutputMeshMessage = instancerDGNode.findPlug(DLInstancer::aOutputMeshNodeMessage, false);
 		MPlug outputShapeMessage = outputShapeDGNode.findPlug("message", false);
 		dgMod_.connect(outputShapeMessage, instancerOutputMeshMessage);
@@ -153,18 +146,32 @@ MStatus DLCreateInstancerCmd::doIt(const MArgList & args)
 		//MGlobal::displayInfo(status.errorString());
 
 		MPlugArray connectedShadingPlugs;
-		instanceMeshPlugInstObjGroups0.connectedTo(connectedShadingPlugs, false, true);
-		MPlug instanceMeshShaderPlug = connectedShadingPlugs[0];
-		MPlug instanceMeshShaderPlugParent = instanceMeshShaderPlug.array();
+		instanceMeshPlugInstObjGroups0.connectedTo(connectedShadingPlugs, false, true, &status);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
 
-		MGlobal::displayInfo(instanceMeshShaderPlugParent.name());
+		if (connectedShadingPlugs.length() != 0 || !createBaseMeshes_)
+		{
+			/*MPlug instanceMeshShaderPlug = connectedShadingPlugs[0];
+			MPlug instanceMeshShaderPlugParent = instanceMeshShaderPlug.array();
+
+			MGlobal::displayInfo(instanceMeshShaderPlugParent.name());
 
 
-		unsigned int numConnectedMeshes = instanceMeshShaderPlugParent.numConnectedElements();
-		unsigned int nextFreePlugByLogicalIndex = instanceMeshShaderPlugParent.elementByPhysicalIndex(numConnectedMeshes).logicalIndex();
-		MPlug outputMeshShaderPlug = instanceMeshShaderPlugParent.elementByLogicalIndex(nextFreePlugByLogicalIndex);
-		dgMod_.connect(outputMeshPlugInstObjGroups0, outputMeshShaderPlug);
-
+			unsigned int numConnectedMeshes = instanceMeshShaderPlugParent.numConnectedElements();
+			unsigned int nextFreePlugByLogicalIndex = instanceMeshShaderPlugParent.elementByPhysicalIndex(numConnectedMeshes).logicalIndex();
+			MPlug outputMeshShaderPlug = instanceMeshShaderPlugParent.elementByLogicalIndex(nextFreePlugByLogicalIndex);*/
+			
+			MPlug outputMeshShaderPlug;
+			MPlug tempPlug;
+			DLCommon::dlGetMaterialConnectionPlugs(instMeshDGNode, tempPlug, outputMeshShaderPlug);
+			dgMod_.connect(outputMeshPlugInstObjGroups0, outputMeshShaderPlug);
+		}
+		else if (createBaseMeshes_)
+		{
+			MPlug instObjGroupsIndex0 = outputShapeDGNode.findPlug("instObjGroups", false).elementByLogicalIndex(0);
+			MPlug defaultShaderPlug = dlGetDefaultShaderPlug_();
+			dgMod_.connect(instObjGroupsIndex0, defaultShaderPlug);
+		}
 	}
 
 	redoIt();
@@ -227,12 +234,12 @@ MObject DLCreateInstancerCmd::dlCreateObject_(dlObjectType type, MString & name)
 {
 	MString transformName = name + "#";;
 	MString shapeName = name + "Shape#";;
-	bool addObjectCreator;
+	bool addObjectCreator = false;
 	MString creatorType;
 
 	if (type == kNull)
 	{
-		addObjectCreator = false;
+
 	}
 	else if (type == kCube)
 	{
@@ -255,19 +262,41 @@ MObject DLCreateInstancerCmd::dlCreateObject_(dlObjectType type, MString & name)
 	if (addObjectCreator)
 	{
 		MStatus status;
-		MObject creatorNode = dgMod_.createNode(creatorType);
+		MObject creatorObj = dgMod_.createNode(creatorType);
+		MFnDependencyNode creatorNode(creatorObj);
 
-		MPlug creatorOutput = MFnDependencyNode(creatorNode).findPlug("output", false);
+		MPlug creatorOutput = creatorNode.findPlug("output", false);
 		MPlug shapeInMesh = MFnDependencyNode(shapeNode).findPlug("inMesh", false);
 
 		dgMod_.connect(creatorOutput, shapeInMesh);
 
 		MPlug instObjGroupsIndex0 = MFnDependencyNode(shapeNode).findPlug("instObjGroups", false).elementByLogicalIndex(0);
-		MPlug dagSetMembersParent = MFnDependencyNode(initialShadingGroup_).findPlug("dagSetMembers", false);
-		unsigned int numConnectedMeshes = dagSetMembersParent.numConnectedElements();
-		unsigned int nextFreePlugByLogicalIndex = dagSetMembersParent.elementByPhysicalIndex(numConnectedMeshes).logicalIndex();
-		MPlug dagSetMembersParentChild = dagSetMembersParent.elementByLogicalIndex(nextFreePlugByLogicalIndex);
+		
+		MPlug dagSetMembersParentChild = dlGetDefaultShaderPlug_();
 		dgMod_.connect(instObjGroupsIndex0, dagSetMembersParentChild);
+
+		if (type == kCube)
+		{
+			double edgeLength = 0.5;
+
+			MPlug height = creatorNode.findPlug("height", false);
+			MPlug depth = creatorNode.findPlug("depth", false);
+			MPlug width = creatorNode.findPlug("width", false);
+
+			height.setDouble(edgeLength);
+			depth.setDouble(edgeLength);
+			width.setDouble(edgeLength);
+		}
+		else if (type == kPlane)
+		{
+			double edgeLength = 10;
+
+			MPlug height = creatorNode.findPlug("height", false);
+			MPlug width = creatorNode.findPlug("width", false);
+
+			height.setDouble(edgeLength);
+			width.setDouble(edgeLength);
+		}
 	}
 
 	
@@ -316,4 +345,28 @@ MStatus DLCreateInstancerCmd::dlGetShapeNode_(MDagPath & path, bool intermediate
 		}
 		return MS::kFailure;
 	}
+}
+
+MPlug DLCreateInstancerCmd::dlGetDefaultShaderPlug_()
+{
+	MObject initialShadingGroup;
+	MItDependencyNodes itDepNodes(MFn::kShadingEngine);
+	for (; !itDepNodes.isDone(); itDepNodes.next())
+	{
+		MFnDependencyNode currentNode(itDepNodes.thisNode());
+		if (currentNode.name() == MString("initialShadingGroup"))
+		{
+			initialShadingGroup = itDepNodes.thisNode();
+			break;
+
+		}
+	}
+
+	MPlug dagSetMembersParent = MFnDependencyNode(initialShadingGroup).findPlug("dagSetMembers", false);
+	unsigned int numConnectedMeshes = dagSetMembersParent.numConnectedElements();
+	unsigned int nextFreePlugByLogicalIndex = dagSetMembersParent.elementByPhysicalIndex(numConnectedMeshes).logicalIndex();
+	MPlug returnPlug = dagSetMembersParent.elementByLogicalIndex(nextFreePlugByLogicalIndex);
+
+	return returnPlug;
+
 }

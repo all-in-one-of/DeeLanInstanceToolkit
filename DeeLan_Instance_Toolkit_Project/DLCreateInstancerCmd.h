@@ -35,7 +35,6 @@ private:
 	MDagModifier dagMod_;
 	MObject instanceMesh_;
 	MObject referenceMesh_;
-	MObject initialShadingGroup_;
 	bool autoUVUpdates_;
 	bool autoMaterialUpdates_;
 	bool createBaseMeshes_;
@@ -47,5 +46,6 @@ private:
 	MObject dlCreateObject_(dlObjectType type, MString& name2);
 	bool dlIsShapeNode(const MDagPath& path);
 	MStatus dlGetShapeNode_(MDagPath& path, bool intermediate = false);
+	MPlug dlGetDefaultShaderPlug_();
 
 };

@@ -2,6 +2,9 @@
 
 #include <maya/MGlobal.h>
 #include <maya/MVector.h>
+#include <maya/MPlug.h>
+#include <maya/MPlugArray.h>
+#include <maya/MFnDependencyNode.h>
 
 #include <random>
 
@@ -17,6 +20,9 @@ public:
 	static float dlGenerateRandomValues(int inSeed, float maxDifference, DLRandomMode mode);
 
 	static MVector dlGenerateRandomValues(int inSeed, float3 maxDifference, DLRandomMode mode);
+
+	static MStatus dlGetMaterialConnectionPlugs(const MFnDependencyNode& sourceNode,
+							MPlug& currentMaterialPlug, MPlug& nextAvailablePlug);
 
 
 private:
