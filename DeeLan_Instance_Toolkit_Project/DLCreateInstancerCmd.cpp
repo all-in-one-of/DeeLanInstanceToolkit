@@ -5,16 +5,11 @@
 #define cfNameLong "-name"
 #define cfCreateBaseMeshesShort "-cbm"
 #define cfCreateBaseMeshesLong "-createBaseMeshes"
-#define cfAutoUVUpdatesShort "-auu"
-#define cfAutoUVUpdatesLong "-autoUVUpdates"
-#define cfAutoMaterialUpdatesShort "-amu"
-#define cfAutoMaterialUpdatesLong "-autoMaterialUpdates"
 
 
 const MString DLCreateInstancerCmd::cmdName = "dlCreateInstancer";
 
-DLCreateInstancerCmd::DLCreateInstancerCmd() : name_("DLInstancer_#"), autoUVUpdates_(false), 
-												autoMaterialUpdates_(false), createBaseMeshes_(false)
+DLCreateInstancerCmd::DLCreateInstancerCmd() : name_("DLInstancer_#"), createBaseMeshes_(false)
 {
 }
 
@@ -33,8 +28,6 @@ MSyntax DLCreateInstancerCmd::initializeSyntax()
 
 	syntax.addFlag(cfNameShort, cfNameLong, MSyntax::kString);
 	syntax.addFlag(cfCreateBaseMeshesShort, cfCreateBaseMeshesLong);
-	syntax.addFlag(cfAutoUVUpdatesShort, cfAutoUVUpdatesLong);
-	syntax.addFlag(cfAutoMaterialUpdatesShort, cfAutoMaterialUpdatesLong);
 	syntax.setObjectType(MSyntax::kSelectionList, 0, 2);
 	syntax.useSelectionAsDefault(true);
 
@@ -66,19 +59,19 @@ MStatus DLCreateInstancerCmd::doIt(const MArgList & args)
 		selectionList_.getDagPath(0, instanceMeshPath);
 		selectionList_.getDagPath(1, referenceMeshPath);
 
-		if (dlIsShapeNode(instanceMeshPath))
+		if (DLCommon::dlIsShapeNode(instanceMeshPath))
 		{
 			instanceMeshPath.pop();
 		}
 
-		if (dlIsShapeNode(referenceMeshPath))
+		if (DLCommon::dlIsShapeNode(referenceMeshPath))
 		{
 			referenceMeshPath.pop();
 		}
 
-		status = dlGetShapeNode_(instanceMeshPath);
+		status = DLCommon::dlGetShapeNode(instanceMeshPath);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
-		status = dlGetShapeNode_(referenceMeshPath);
+		status = DLCommon::dlGetShapeNode(referenceMeshPath);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
 		instanceMesh_ = instanceMeshPath.node();
@@ -126,52 +119,37 @@ MStatus DLCreateInstancerCmd::doIt(const MArgList & args)
 	MPlug outputShapeInMesh = outputShapeDGNode.findPlug("inMesh", false);
 	dgMod_.connect(instancerOutMesh, outputShapeInMesh);
 
-	if (autoMaterialUpdates_ == true)
+
+
+	MPlug instancerOutputMeshMessage = instancerDGNode.findPlug(DLInstancer::aOutputMeshNodeMessage, false);
+	MPlug outputShapeMessage = outputShapeDGNode.findPlug("message", false);
+	dgMod_.connect(outputShapeMessage, instancerOutputMeshMessage);
+
+
+	//MGlobal::displayInfo("TEST");
+	MPlug outputMeshPlugInstObjGroups0 = outputShapeDGNode.findPlug("instObjGroups", false).elementByLogicalIndex(0 &status);
+	//MGlobal::displayInfo(status.errorString());
+	MPlug instanceMeshPlugInstObjGroups0 = instMeshDGNode.findPlug("instObjGroups", false).elementByLogicalIndex(0 & status);
+	//MGlobal::displayInfo(status.errorString());
+
+	MPlugArray connectedShadingPlugs;
+	instanceMeshPlugInstObjGroups0.connectedTo(connectedShadingPlugs, false, true, &status);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+
+	if (connectedShadingPlugs.length() != 0 || !createBaseMeshes_)
+	{
+			
+		MPlug outputMeshShaderPlug;
+		MPlug tempPlug;
+		DLCommon::dlGetMaterialConnectionPlugs(instMeshDGNode, tempPlug, outputMeshShaderPlug);
+		dgMod_.connect(outputMeshPlugInstObjGroups0, outputMeshShaderPlug);
+	}
+	else if (createBaseMeshes_)
 	{
 		MPlug instObjGroupsIndex0 = outputShapeDGNode.findPlug("instObjGroups", false).elementByLogicalIndex(0);
 		MPlug defaultShaderPlug = dlGetDefaultShaderPlug_();
 		dgMod_.connect(instObjGroupsIndex0, defaultShaderPlug);
 
-		MPlug instancerOutputMeshMessage = instancerDGNode.findPlug(DLInstancer::aOutputMeshNodeMessage, false);
-		MPlug outputShapeMessage = outputShapeDGNode.findPlug("message", false);
-		dgMod_.connect(outputShapeMessage, instancerOutputMeshMessage);
-	}
-	else
-	{
-
-		//MGlobal::displayInfo("TEST");
-		MPlug outputMeshPlugInstObjGroups0 = outputShapeDGNode.findPlug("instObjGroups", false).elementByLogicalIndex(0 &status);
-		//MGlobal::displayInfo(status.errorString());
-		MPlug instanceMeshPlugInstObjGroups0 = instMeshDGNode.findPlug("instObjGroups", false).elementByLogicalIndex(0 & status);
-		//MGlobal::displayInfo(status.errorString());
-
-		MPlugArray connectedShadingPlugs;
-		instanceMeshPlugInstObjGroups0.connectedTo(connectedShadingPlugs, false, true, &status);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-
-		if (connectedShadingPlugs.length() != 0 || !createBaseMeshes_)
-		{
-			/*MPlug instanceMeshShaderPlug = connectedShadingPlugs[0];
-			MPlug instanceMeshShaderPlugParent = instanceMeshShaderPlug.array();
-
-			MGlobal::displayInfo(instanceMeshShaderPlugParent.name());
-
-
-			unsigned int numConnectedMeshes = instanceMeshShaderPlugParent.numConnectedElements();
-			unsigned int nextFreePlugByLogicalIndex = instanceMeshShaderPlugParent.elementByPhysicalIndex(numConnectedMeshes).logicalIndex();
-			MPlug outputMeshShaderPlug = instanceMeshShaderPlugParent.elementByLogicalIndex(nextFreePlugByLogicalIndex);*/
-			
-			MPlug outputMeshShaderPlug;
-			MPlug tempPlug;
-			DLCommon::dlGetMaterialConnectionPlugs(instMeshDGNode, tempPlug, outputMeshShaderPlug);
-			dgMod_.connect(outputMeshPlugInstObjGroups0, outputMeshShaderPlug);
-		}
-		else if (createBaseMeshes_)
-		{
-			MPlug instObjGroupsIndex0 = outputShapeDGNode.findPlug("instObjGroups", false).elementByLogicalIndex(0);
-			MPlug defaultShaderPlug = dlGetDefaultShaderPlug_();
-			dgMod_.connect(instObjGroupsIndex0, defaultShaderPlug);
-		}
 	}
 
 	redoIt();
@@ -216,16 +194,7 @@ MStatus DLCreateInstancerCmd::dlParseArgs_(const MArgList & args)
 		createBaseMeshes_ = true;
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 	}
-	if (argData.isFlagSet(cfAutoUVUpdatesShort))
-	{
-		autoUVUpdates_ = true;
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-	}
-	if (argData.isFlagSet(cfAutoMaterialUpdatesShort))
-	{
-		autoMaterialUpdates_ = true;
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-	}
+
 
 	return MS::kSuccess;
 }
@@ -301,50 +270,6 @@ MObject DLCreateInstancerCmd::dlCreateObject_(dlObjectType type, MString & name)
 
 	
 	return shapeNode;
-}
-
-bool DLCreateInstancerCmd::dlIsShapeNode(const MDagPath & path)
-{
-	return path.node().hasFn(MFn::kMesh) || path.node().hasFn(MFn::kNurbsCurve) || 
-			path.node().hasFn(MFn::kNurbsSurface);
-}
-
-MStatus DLCreateInstancerCmd::dlGetShapeNode_(MDagPath & path, bool intermediate)
-{
-	MStatus status;
-
-	bool suitableShapeFound;
-	unsigned int numShapes;
-	path.numberOfShapesDirectlyBelow(numShapes);
-
-	for (unsigned int i = 0; i < numShapes; ++i)
-	{
-		path.extendToShapeDirectlyBelow(i);
-		MFnDagNode node(path);
-		if (node.isIntermediateObject() == intermediate)
-		{
-			suitableShapeFound = true;
-			break;
-		}
-		path.pop();
-	}
-
-	if (suitableShapeFound)
-	{
-		return MS::kSuccess;
-	}
-	else
-	{
-		if (!intermediate)
-		{
-			MGlobal::displayError("NO SHAPE FOUND");
-		}
-		else
-		{
-			MGlobal::displayError("NO INTERMEDIATE SHAPES FOUND");
-		}
-		return MS::kFailure;
-	}
 }
 
 MPlug DLCreateInstancerCmd::dlGetDefaultShaderPlug_()

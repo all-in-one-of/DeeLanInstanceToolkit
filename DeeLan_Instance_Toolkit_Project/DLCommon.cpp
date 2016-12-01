@@ -87,5 +87,47 @@ MStatus DLCommon::dlGetMaterialConnectionPlugs(const MFnDependencyNode& sourceNo
 	return MS::kFailure;
 }
 
+bool DLCommon::dlIsShapeNode(const MDagPath & path)
+{
+	return path.node().hasFn(MFn::kMesh) || path.node().hasFn(MFn::kNurbsCurve) ||
+		path.node().hasFn(MFn::kNurbsSurface);
+}
 
+MStatus DLCommon::dlGetShapeNode(MDagPath & path, bool intermediate)
+{
+	MStatus status;
+
+	bool suitableShapeFound;
+	unsigned int numShapes;
+	path.numberOfShapesDirectlyBelow(numShapes);
+
+	for (unsigned int i = 0; i < numShapes; ++i)
+	{
+		path.extendToShapeDirectlyBelow(i);
+		MFnDagNode node(path);
+		if (node.isIntermediateObject() == intermediate)
+		{
+			suitableShapeFound = true;
+			break;
+		}
+		path.pop();
+	}
+
+	if (suitableShapeFound)
+	{
+		return MS::kSuccess;
+	}
+	else
+	{
+		if (!intermediate)
+		{
+			MGlobal::displayError("NO SHAPE FOUND");
+		}
+		else
+		{
+			MGlobal::displayError("NO INTERMEDIATE SHAPES FOUND");
+		}
+		return MS::kFailure;
+	}
+}
 

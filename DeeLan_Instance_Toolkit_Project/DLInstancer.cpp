@@ -232,10 +232,6 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 	{
 		attributeDirty_[kAlignment] = true;
 	}
-	else if (plug == aInstanceMessage || plug == aOutputMeshNodeMessage)
-	{
-		attributeDirty_[kMessage] = true;
-	}
 
 	setDependentsDirtyCalled_ = true;
 	return MS::kSuccess;
@@ -468,61 +464,6 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 	hOutput.set(hGeneratedMesh.asMesh());
 	dlDeformMesh(hOutput, ouputTransformMatricies_);
 	
-	// DEALING WITH MATERIALS //
-	if (attributeDirty_[kMessage] == true)
-	{
-
-		bool outputMeshMessageConnected = MPlug(thisMObject(), aOutputMeshNodeMessage).isConnected();
-		bool instanceMeshMessageConnected = MPlug(thisMObject(), aInstanceMessage).isConnected();
-
-		updateMaterials_ = (outputMeshMessageConnected && instanceMeshMessageConnected);
-		attributeDirty_[kMessage] = false;
-	}
-
-	if (updateMaterials_)
-	{
-		MGlobal::displayInfo("UPDATING MATERIALS");
-		MPlugArray instanceMeshMessageConnected;
-		MPlug instanceMeshMessage(thisMObject(), aInstanceMessage);
-		instanceMeshMessage.connectedTo(instanceMeshMessageConnected, true, false);
-		MFnDependencyNode instanceMesh(instanceMeshMessageConnected[0].node());
-
-		MPlug currentInstanceMaterialPlug;
-		MPlug nextInstanceMaterialPlug;
-		status = DLCommon::dlGetMaterialConnectionPlugs(instanceMesh, currentInstanceMaterialPlug, nextInstanceMaterialPlug);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-
-
-		MPlugArray outputMeshMessageConnected;
-		MPlug outputMeshMessage(thisMObject(), aOutputMeshNodeMessage);
-		outputMeshMessage.connectedTo(outputMeshMessageConnected, true, false);
-		MFnDependencyNode outputMesh(outputMeshMessageConnected[0].node());
-
-		MPlug currentOutputMaterialPlug;
-		MPlug nextOutputMaterialPlug;
-		status = DLCommon::dlGetMaterialConnectionPlugs(outputMesh, currentOutputMaterialPlug, nextOutputMaterialPlug);
-		//CHECK_MSTATUS_AND_RETURN_IT(status);
-
-		MGlobal::displayInfo(currentInstanceMaterialPlug.name());
-		MGlobal::displayInfo(nextOutputMaterialPlug.name());
-
-
-		if (currentInstanceMaterialPlug.node() != nextOutputMaterialPlug.node())
-		{
-			MDGModifier dgMod;
-			MPlug ouputInstObjGroups0 = outputMesh.findPlug("instObjGroups", false).elementByLogicalIndex(0);
-
-			status = dgMod.disconnect(ouputInstObjGroups0, currentOutputMaterialPlug);
-			CHECK_MSTATUS_AND_RETURN_IT(status);
-			status = dgMod.connect(ouputInstObjGroups0, nextInstanceMaterialPlug);
-			CHECK_MSTATUS_AND_RETURN_IT(status);
-
-			status = dgMod.doIt();
-			CHECK_MSTATUS_AND_RETURN_IT(status);
-
-			MGlobal::displayInfo("dgMod EXECUTED");
-		}
-	}
 
 	data.setClean(plug);
 	return MS::kSuccess;

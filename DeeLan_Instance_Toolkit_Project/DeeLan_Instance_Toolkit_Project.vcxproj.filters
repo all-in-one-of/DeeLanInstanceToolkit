@@ -30,6 +30,9 @@
     <ClCompile Include="DLCreateInstancerCmd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DLUpdateMaterialsCmd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DLCustomDataTypes.h">
@@ -42,6 +45,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DLCreateInstancerCmd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DLUpdateMaterialsCmd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

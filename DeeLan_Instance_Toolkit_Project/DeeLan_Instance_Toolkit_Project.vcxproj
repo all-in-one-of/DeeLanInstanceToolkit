@@ -23,6 +23,7 @@
     <ClCompile Include="DLCreateInstancerCmd.cpp" />
     <ClCompile Include="DLCustomDataTypes.cpp" />
     <ClCompile Include="DLInstancer.cpp" />
+    <ClCompile Include="DLUpdateMaterialsCmd.cpp" />
     <ClCompile Include="pluginMain.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -30,6 +31,7 @@
     <ClInclude Include="DLCreateInstancerCmd.h" />
     <ClInclude Include="DLCustomDataTypes.h" />
     <ClInclude Include="DLInstancer.h" />
+    <ClInclude Include="DLUpdateMaterialsCmd.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{b817d839-151d-496c-8442-0b9d5e615edb}</ProjectGuid>
