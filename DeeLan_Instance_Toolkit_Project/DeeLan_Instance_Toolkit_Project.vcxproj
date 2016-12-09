@@ -20,14 +20,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DLCommon.cpp" />
+    <ClCompile Include="DLCreateInstancerCmd.cpp" />
     <ClCompile Include="DLCustomDataTypes.cpp" />
     <ClCompile Include="DLInstancer.cpp" />
+    <ClCompile Include="DLUpdateMaterialsCmd.cpp" />
     <ClCompile Include="pluginMain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DLCommon.h" />
+    <ClInclude Include="DLCreateInstancerCmd.h" />
     <ClInclude Include="DLCustomDataTypes.h" />
     <ClInclude Include="DLInstancer.h" />
+    <ClInclude Include="DLUpdateMaterialsCmd.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{b817d839-151d-496c-8442-0b9d5e615edb}</ProjectGuid>
@@ -81,9 +85,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetExt>.mll</TargetExt>
+    <TargetName>DeeLan_Instance_Toolkit_Project</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetExt>.mll</TargetExt>
+    <TargetName>DeeLan_Instance_Toolkit_Project</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

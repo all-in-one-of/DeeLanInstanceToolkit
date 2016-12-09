@@ -1,0 +1,3 @@
+DLUpdateUVs, DLUpdateMaterials, DLChangeInstanceMesh and DLChangeReferenceMesh not yet implemented.
+
+For DLCreateInstancerCmd, autoUVUpdates current doesn't do anything

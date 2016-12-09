@@ -58,3 +58,76 @@ MVector DLCommon::dlGenerateRandomValues(int inSeed, float3 maxDifference, DLRan
 	return outVec;
 }
 
+MStatus DLCommon::dlGetMaterialConnectionPlugs(const MFnDependencyNode& sourceNode, 
+												MPlug& currentMaterialPlug,  MPlug& nextAvailablePlug)
+{
+	MStatus status;
+
+	MPlug instObjGroupsIndex0 = sourceNode.findPlug("instObjGroups", false, &status).elementByLogicalIndex(0);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+
+	if (instObjGroupsIndex0.isConnected())
+	{
+		MPlugArray connectedPlugs;
+		instObjGroupsIndex0.connectedTo(connectedPlugs, false, true, &status);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+		if (connectedPlugs.length() != 0)
+		{
+			currentMaterialPlug = connectedPlugs[0];
+			MPlug shaderConnectionParent = currentMaterialPlug.array();
+
+			unsigned int numConnectedMeshes = shaderConnectionParent.numConnectedElements();
+			unsigned int nextFreePlugByLogicalIndex = shaderConnectionParent.elementByPhysicalIndex(numConnectedMeshes).logicalIndex();
+			nextAvailablePlug = shaderConnectionParent.elementByLogicalIndex(nextFreePlugByLogicalIndex);
+			return MS::kSuccess;
+
+		}
+	}
+	return MS::kFailure;
+}
+
+bool DLCommon::dlIsShapeNode(const MDagPath & path)
+{
+	return path.node().hasFn(MFn::kMesh) || path.node().hasFn(MFn::kNurbsCurve) ||
+		path.node().hasFn(MFn::kNurbsSurface);
+}
+
+MStatus DLCommon::dlGetShapeNode(MDagPath & path, bool intermediate)
+{
+	MStatus status;
+
+	bool suitableShapeFound;
+	unsigned int numShapes;
+	path.numberOfShapesDirectlyBelow(numShapes);
+
+	for (unsigned int i = 0; i < numShapes; ++i)
+	{
+		path.extendToShapeDirectlyBelow(i);
+		MFnDagNode node(path);
+		if (node.isIntermediateObject() == intermediate)
+		{
+			suitableShapeFound = true;
+			break;
+		}
+		path.pop();
+	}
+
+	if (suitableShapeFound)
+	{
+		return MS::kSuccess;
+	}
+	else
+	{
+		if (!intermediate)
+		{
+			MGlobal::displayError("NO SHAPE FOUND");
+		}
+		else
+		{
+			MGlobal::displayError("NO INTERMEDIATE SHAPES FOUND");
+		}
+		return MS::kFailure;
+	}
+}
+
