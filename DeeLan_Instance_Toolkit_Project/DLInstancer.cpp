@@ -105,7 +105,7 @@ MStatus DLInstancer::initialize()
 
 	aReferenceMatrix = mAttr.create("referenceMatrix", "rMatrix");
 	mAttr.setDefault(MMatrix::identity);
-	//mAttr.setDisconnectBehavior(MFnAttribute::kReset)
+	mAttr.setDisconnectBehavior(MFnAttribute::kReset);
 
 	cAttr.addChild(aReferenceMesh);
 	cAttr.addChild(aReferenceMatrix);

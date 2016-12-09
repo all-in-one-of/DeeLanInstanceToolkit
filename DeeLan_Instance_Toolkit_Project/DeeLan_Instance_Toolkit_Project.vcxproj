@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="DLCommon.cpp" />
     <ClCompile Include="DLCreateInstancerCmd.cpp" />
+    <ClCompile Include="DLCurveToReference.cpp" />
     <ClCompile Include="DLCustomDataTypes.cpp" />
     <ClCompile Include="DLInstancer.cpp" />
     <ClCompile Include="DLUpdateMaterialsCmd.cpp" />
@@ -29,6 +30,7 @@
   <ItemGroup>
     <ClInclude Include="DLCommon.h" />
     <ClInclude Include="DLCreateInstancerCmd.h" />
+    <ClInclude Include="DLCurveToReference.h" />
     <ClInclude Include="DLCustomDataTypes.h" />
     <ClInclude Include="DLInstancer.h" />
     <ClInclude Include="DLUpdateMaterialsCmd.h" />

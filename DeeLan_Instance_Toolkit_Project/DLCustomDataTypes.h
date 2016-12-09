@@ -1,10 +1,13 @@
 #pragma once
 
+#include <maya/MPxData.h>
 #include <maya/MIntArray.h>
 #include <maya/MPointArray.h>
 #include <maya/MFloatArray.h>
 #include <maya/MFloatVectorArray.h>
+#include <maya/MVectorArray.h>
 #include <maya/MMatrixArray.h>
+#include <maya/MTypeId.h>
 #include <maya/MString.h>
 #include <maya/MStringArray.h>
 
@@ -53,3 +56,28 @@ struct DLTransformData
 };
 
 
+
+
+class DLReferenceCurveData : public MPxData
+{
+public:
+	DLReferenceCurveData();
+	~DLReferenceCurveData();
+
+	static void* creator();
+	virtual void copy(const MPxData& otherCurve);
+	MTypeId typeId() const;
+	MString name() const;
+
+	MPointArray points();
+	MVectorArray normals();
+	void setPoints(const MPointArray& points);
+	void setNormals(const MVectorArray& normals);
+
+	static const MString dataName;
+	static const MTypeId id;
+
+private:
+	MPointArray points_;
+	MVectorArray normals_;
+};

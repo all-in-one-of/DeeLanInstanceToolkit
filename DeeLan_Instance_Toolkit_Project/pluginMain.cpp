@@ -2,6 +2,8 @@
 #include <maya/MFnPlugin.h>
 
 #include "DLInstancer.h"
+#include "DLCurveToReference.h"
+#include "DLCustomDataTypes.h"
 #include "DLCreateInstancerCmd.h"
 #include "DLUpdateMaterialsCmd.h"
 
@@ -13,6 +15,12 @@ MStatus initializePlugin(MObject obj)
 	status = fnPlugin.registerNode(DLInstancer::nodeName, DLInstancer::id, 
 		DLInstancer::creator, DLInstancer::initialize);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
+
+	status = fnPlugin.registerNode(DLCurveToReference::nodeName, DLCurveToReference::id,
+		DLCurveToReference::creator, DLCurveToReference::initialize);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
+
+	status = fnPlugin.registerData(DLReferenceCurveData::dataName, DLReferenceCurveData::id, DLReferenceCurveData::creator);
 
 	status = fnPlugin.registerCommand(DLCreateInstancerCmd::cmdName, DLCreateInstancerCmd::creator, DLCreateInstancerCmd::initializeSyntax);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
