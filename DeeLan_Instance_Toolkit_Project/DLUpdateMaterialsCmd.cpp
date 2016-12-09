@@ -39,7 +39,7 @@ MStatus DLUpdateMaterialsCmd::doIt(const MArgList & args)
 	{
 		dlGetInstancerNode_();
 		displayInfo("DAG NODE");
-		return MS::kSuccess; // TESTING ONLY DELETE!!!!!
+		//return MS::kSuccess; // TESTING ONLY DELETE!!!!!
 	}
 	else if (MFnDependencyNode(selectedNode_).typeId() == DLInstancer::id)
 	{
@@ -49,7 +49,7 @@ MStatus DLUpdateMaterialsCmd::doIt(const MArgList & args)
 	else
 	{
 		MGlobal::displayError("Unable to update materials due to invalid selection. Please select either a dlInstancer node, or a Dag node.");
-		return MS::kSuccess;
+		return MS::kFailure;
 	}
 
 	dlConnectMaterials_();
@@ -106,13 +106,10 @@ MStatus DLUpdateMaterialsCmd::dlGetInstancerNode_()
 	MFnDagNode selectedDAGNode(selectedNode_, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
-	MGlobal::displayInfo(selectedDAGNode.name());
-
 	MDagPath pathSelectedNode;
 	status = selectedDAGNode.getPath(pathSelectedNode);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
-	displayInfo(pathSelectedNode.fullPathName());
 
 	if (DLCommon::dlIsShapeNode(pathSelectedNode))
 	{
@@ -120,28 +117,29 @@ MStatus DLUpdateMaterialsCmd::dlGetInstancerNode_()
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 	}
 
-	displayInfo(pathSelectedNode.fullPathName());
-
 	status = DLCommon::dlGetShapeNode(pathSelectedNode);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
-
-	displayInfo(pathSelectedNode.fullPathName());
 
 
 	MFnDagNode mainShapeDAGNode(pathSelectedNode.node());
 	MPlug plugInMesh = mainShapeDAGNode.findPlug("inMesh", false, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
-	MItDependencyGraph itDG(plugInMesh, MFn::kInvalid, MItDependencyGraph::kUpstream, 
+	MItDependencyGraph itDG(plugInMesh, MFn::kPluginDependNode, MItDependencyGraph::kUpstream, 
 							MItDependencyGraph::kBreadthFirst, MItDependencyGraph::kNodeLevel, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	for (; !itDG.isDone(); itDG.next())
 	{
-		MGlobal::displayInfo(itDG.currentItem().apiTypeStr());
+		if (MFnDependencyNode(itDG.currentItem()).typeId() == DLInstancer::id)
+		{
+			//MGlobal::displayInfo(MFnDependencyNode(itDG.currentItem()).name());
+			instancerNode_ = itDG.currentItem();
+			return MS::kSuccess;
+		}
 	}
-
-	return MS::kSuccess;
+	MGlobal::displayError("No Connected Instancer Nodes Found.");
+	return MS::kFailure;
 }
 
 MStatus DLUpdateMaterialsCmd::dlConnectMaterials_()
@@ -154,8 +152,15 @@ MStatus DLUpdateMaterialsCmd::dlConnectMaterials_()
 	MPlugArray instanceMeshMessageConnected;
 	MPlug instanceMeshMessage = instancerDPNode.findPlug("instanceMeshMessage", false, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
+	if (!instanceMeshMessage.isConnected())
+	{
+		MGlobal::displayError("The Instancer Node's \"instanceMeshMessage\" plug is not connected to an Instance Mesh. Please Reconnect plug and try again");
+		return MS::kFailure;
+	}
+
 	instanceMeshMessage.connectedTo(instanceMeshMessageConnected, true, false);
-	MFnDependencyNode instanceMesh(instanceMeshMessageConnected[0].node());
+	MFnDependencyNode instanceMesh(instanceMeshMessageConnected[0].node(), &status);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	MPlug currentInstanceMaterialPlug;
 	MPlug nextInstanceMaterialPlug;
@@ -163,19 +168,23 @@ MStatus DLUpdateMaterialsCmd::dlConnectMaterials_()
 	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 
+
 	MPlugArray outputMeshMessageConnected;
 	MPlug outputMeshMessage = instancerDPNode.findPlug("outputMeshNode", false, &status);
 	CHECK_MSTATUS_AND_RETURN_IT(status);
+	if (!outputMeshMessage.isConnected())
+	{
+		MGlobal::displayError("The Instancer Node's \"outputMeshNode\" plug is not connected to an Output Mesh. Please Reconnect plug and try again");
+		return MS::kFailure;
+	}
 	outputMeshMessage.connectedTo(outputMeshMessageConnected, true, false);
-	MFnDependencyNode outputMesh(outputMeshMessageConnected[0].node());
+	MFnDependencyNode outputMesh(outputMeshMessageConnected[0].node(), &status);
+	CHECK_MSTATUS_AND_RETURN_IT(status);
 
 	MPlug currentOutputMaterialPlug;
 	MPlug nextOutputMaterialPlug;
 	status = DLCommon::dlGetMaterialConnectionPlugs(outputMesh, currentOutputMaterialPlug, nextOutputMaterialPlug);
 	//CHECK_MSTATUS_AND_RETURN_IT(status);
-
-	MGlobal::displayInfo(currentInstanceMaterialPlug.name());
-	MGlobal::displayInfo(nextOutputMaterialPlug.name());
 
 
 	if (currentInstanceMaterialPlug.node() != nextOutputMaterialPlug.node())
