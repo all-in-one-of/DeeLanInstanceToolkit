@@ -17,7 +17,7 @@ class DLCommon
 public:
 
 	//ENUMS
-	enum DLRandomMode { kNormal, kTranslate, kRotate, kScale };
+	enum DLRandomMode { kNormal, kTranslate, kRotate, kScale, kCurveParam };
 
 	//METHODS
 

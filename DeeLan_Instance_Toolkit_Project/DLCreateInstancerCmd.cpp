@@ -78,11 +78,31 @@ MStatus DLCreateInstancerCmd::doIt(const MArgList & args)
 		referenceMesh_ = referenceMeshPath.node();
 
 	}
+	if (instanceMesh_.apiType() != MFn::kMesh)
+	{
+		MGlobal::displayError("Instance object is of illegal type. Please select a Mesh.");
+		return MS::kFailure;
+	}
+
+	MString referenceObjectPlug;
+	if (referenceMesh_.apiType() == MFn::kMesh)
+	{
+		referenceObjectPlug = "outMesh";
+	}
+	else if (referenceMesh_.apiType() == MFn::kNurbsCurve)
+	{
+		referenceObjectPlug = "local";
+	}
+	else
+	{
+		MGlobal::displayError("Reference Object is of illegal type. Please select either a Mesh or a Curve.");
+		return MS::kFailure;
+	}
 
 
 	// CONNECT INSTANCE AND REFERENCE MESHES TO INSTANCER NODE //
 	MObject instancerNode = dgMod_.createNode(DLInstancer::id);
-	MObject outputShape = dlCreateObject_(kNull, MString("dlInstancedObject"));
+	MObject outputShape = dlCreateObject_(kNull, MString("dlInstancedObject#"));
 
 	MFnDagNode instMeshDGNode(instanceMesh_);
 	MFnDagNode refMeshDGNode(referenceMesh_);
@@ -103,7 +123,7 @@ MStatus DLCreateInstancerCmd::doIt(const MArgList & args)
 
 
 
-	MPlug refMeshPlugOutMesh = refMeshDGNode.findPlug("outMesh", false);
+	MPlug refMeshPlugOutMesh = refMeshDGNode.findPlug(referenceObjectPlug, false);
 	MPlug refMeshPlugWorldMatrix = refMeshDGNode.findPlug("worldMatrix", false).elementByLogicalIndex(0, &status);
 
 	MPlug nodePlugNodeInMesh = instancerDGNode.findPlug(DLInstancer::aReferenceMesh, false);

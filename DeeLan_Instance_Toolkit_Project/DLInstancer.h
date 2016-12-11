@@ -33,6 +33,7 @@
 
 #include <map>
 #include <vector>
+#include <math.h>
 
 #include "DLCustomDataTypes.h"
 #include "DLCommon.h"
@@ -54,7 +55,7 @@ public:
 
 	MStatus dlGetMeshData(const MObject& mesh, DLMeshData& meshData);
 
-	MStatus dlGenerateReferencePointsOnCurve(MFnNurbsCurve& fnCurve);
+	MStatus dlGenerateReferencePointsOnCurve(MFnNurbsCurve& fnCurve, float paramOffset, float paramRandom, int paramSeed);
 
 	MStatus dlCreateOutputMeshData(const DLMeshData& inMeshData, unsigned int numCopies,
 								DLMeshData& outMeshData, bool clearData = true);
@@ -87,7 +88,13 @@ public:
 	static MObject aReferenceMatrix;
 
 	static MObject aAlignToNormals;
+	static MObject aLockYAlignment;
+
 	static MObject aNumCurvePoints;
+	static MObject aCurveParamOffset;
+	static MObject aCurveParamRandom;
+	static MObject aCurveParamSeed;
+
 
 	static MObject aNormalOffset;
 	static MObject aTranslate;
@@ -100,7 +107,7 @@ public:
 	static MObject aRotationRandom;
 	static MObject aUniformScaleRandom;
 	static MObject aScaleRandom;
-	static MObject aNodeSeed;
+	static MObject aTransformSeed;
 
 	static MObject aGeneratedMesh;
 

@@ -20,6 +20,10 @@ int DLCommon::getModeSeed(DLRandomMode mode)
 	{
 		seed = 4312;
 	}
+	else if (mode == kCurveParam)
+	{
+		seed = 3333;
+	}
 
 	return seed;
 }
