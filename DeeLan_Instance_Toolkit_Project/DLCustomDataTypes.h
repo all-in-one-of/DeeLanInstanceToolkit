@@ -56,28 +56,3 @@ struct DLTransformData
 };
 
 
-
-
-class DLReferenceCurveData : public MPxData
-{
-public:
-	DLReferenceCurveData();
-	~DLReferenceCurveData();
-
-	static void* creator();
-	virtual void copy(const MPxData& otherCurve);
-	MTypeId typeId() const;
-	MString name() const;
-
-	MPointArray points();
-	MVectorArray normals();
-	void setPoints(const MPointArray& points);
-	void setNormals(const MVectorArray& normals);
-
-	static const MString dataName;
-	static const MTypeId id;
-
-private:
-	MPointArray points_;
-	MVectorArray normals_;
-};

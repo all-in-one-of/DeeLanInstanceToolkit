@@ -16,6 +16,8 @@ MObject DLInstancer::aReferenceMesh;
 MObject DLInstancer::aReferenceMatrix;
 
 MObject DLInstancer::aAlignToNormals;
+MObject DLInstancer::aNumCurvePoints;
+
 
 MObject DLInstancer::aNormalOffset;
 MObject DLInstancer::aTranslate;
@@ -59,6 +61,7 @@ MStatus DLInstancer::initialize()
 	MFnCompoundAttribute cAttr;
 	MFnMatrixAttribute mAttr;
 	MFnMessageAttribute msgAttr;
+	MFnGenericAttribute gAttr;
 
 	//Output Attributes
 	aOutMesh = tAttr.create("outMesh", "oMesh", MFnData::kMesh);
@@ -100,8 +103,13 @@ MStatus DLInstancer::initialize()
 
 	aReferenceObject = cAttr.create("referenceObject", "rObj");
 
-	aReferenceMesh = tAttr.create("referenceMesh", "rMesh", MFnData::kMesh);
-	tAttr.setReadable(false);
+	aReferenceMesh = gAttr.create("referenceMesh", "rMesh");
+	gAttr.addDataAccept(MFnData::kMesh);
+	gAttr.addDataAccept(MFnData::kNurbsCurve);
+	gAttr.setReadable(false);
+
+	/*aReferenceMesh = tAttr.create("referenceMesh", "rMesh", MFnData::kMesh);
+	tAttr.setReadable(false);*/
 
 	aReferenceMatrix = mAttr.create("referenceMatrix", "rMatrix");
 	mAttr.setDefault(MMatrix::identity);
@@ -116,14 +124,16 @@ MStatus DLInstancer::initialize()
 
 
 
-
-
-
-
 	aAlignToNormals = nAttr.create("alignToNormals", "alignNormals", MFnNumericData::kBoolean, true);
 	nAttr.setKeyable(true);
 	addAttribute(aAlignToNormals);
 	attributeAffects(aAlignToNormals, aOutMesh);
+
+	aNumCurvePoints = nAttr.create("numCurveReferencePoints", "numCurvePts", MFnNumericData::kInt, 3);
+	nAttr.setKeyable(true);
+	nAttr.setMin(1);
+	addAttribute(aNumCurvePoints);
+	attributeAffects(aNumCurvePoints, aOutMesh);
 
 	aNormalOffset = nAttr.create("normalOffset", "nOff", MFnNumericData::kFloat);
 	nAttr.setKeyable(true);
@@ -207,7 +217,7 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 	{
 		attributeDirty_[kInstanceMesh] = true;
 	}
-	else if (plug == aReferenceMesh)
+	else if (plug == aReferenceMesh || plug == aNumCurvePoints)
 	{
 		attributeDirty_[kReferenceMesh] = true;
 	}
@@ -296,42 +306,68 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 	if (attributeDirty_[kReferenceMesh] == true)
 	{
 		//MGlobal::displayInfo("Reference Mesh"); //DEBUGGING
-		MObject referenceMesh = data.inputValue(DLInstancer::aReferenceMesh, &status).asMesh();
+		MDataHandle referenceObjectHandle = data.inputValue(DLInstancer::aReferenceMesh, &status);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 
-
-
-
-
-		MFnMesh fnRefMesh(referenceMesh);
-		MPointArray points;
-		MFloatVectorArray normals;
-
-		status = fnRefMesh.getPoints(points, MSpace::kWorld);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-
-		status = fnRefMesh.getVertexNormals(false, normals, MSpace::kWorld);
-		CHECK_MSTATUS_AND_RETURN_IT(status);
-
-		if (points.length() != numInstances_)
+		if (referenceObjectHandle.type() == MFnData::kMesh)
 		{
-			numInstances_ = points.length();
-			recreateOutMesh = true;
-		}
-		transformData_.referencePoints.clear();
-		transformData_.referenceNormals.clear();
-		transformData_.normalAlignmentMatricies.clear();
+			MObject referenceMesh = referenceObjectHandle.asMesh();
+			MFnMesh fnRefMesh(referenceMesh);
+			MPointArray points;
+			MFloatVectorArray normals;
 
-		transformData_.referencePoints = points;
-		transformData_.referenceNormals = normals;
+			status = fnRefMesh.getPoints(points, MSpace::kWorld);
+			CHECK_MSTATUS_AND_RETURN_IT(status);
+
+			status = fnRefMesh.getVertexNormals(false, normals, MSpace::kWorld);
+			CHECK_MSTATUS_AND_RETURN_IT(status);
+
+			if (points.length() != numInstances_)
+			{
+				numInstances_ = points.length();
+				recreateOutMesh = true;
+			}
+			transformData_.referencePoints.clear();
+			transformData_.referenceNormals.clear();
+			transformData_.normalAlignmentMatricies.clear();
+
+			transformData_.referencePoints = points;
+			transformData_.referenceNormals = normals;
+
+			
+			for (unsigned int i = 0; i < normals.length(); ++i)
+			{
+				MMatrix alignMatrix = dlGenerateNormalAlignmentMatrix(normals[i]);
+				transformData_.normalAlignmentMatricies.append(alignMatrix);
+
+			}
+		}
+		else if (referenceObjectHandle.type() == MFnData::kNurbsCurve)
+		{
+			MObject referenceCurve = referenceObjectHandle.asNurbsCurve();
+			MFnNurbsCurve fnCurve(referenceCurve, &status);
+			CHECK_MSTATUS_AND_RETURN_IT(status);
+
+			int numCurvePoints = data.inputValue(DLInstancer::aNumCurvePoints, &status).asInt();
+			CHECK_MSTATUS_AND_RETURN_IT(status);
+			if (numCurvePoints != numInstances_)
+			{
+				numInstances_ = numCurvePoints;
+				recreateOutMesh = true;
+			}
+
+
+			status = dlGenerateReferencePointsOnCurve(fnCurve);
+			CHECK_MSTATUS_AND_RETURN_IT(status);
+
+			
+		}
+		else
+		{
+			MGlobal::displayError("Illegal object type pluged into the Reference Mesh plug.");
+		}
 
 		
-		for (unsigned int i = 0; i < normals.length(); ++i)
-		{
-			MMatrix alignMatrix = dlGenerateNormalAlignmentMatrix(normals[i]);
-			transformData_.normalAlignmentMatricies.append(alignMatrix);
-
-		}
 
 
 
@@ -484,6 +520,11 @@ MStatus DLInstancer::dlManualSetDependentsDirty(MDataBlock& data)
 		MPlug plug(thisMObject(), aReferenceMesh);
 		setDependentsDirty(plug, plugArray);
 	}
+	if (!data.isClean(aNumCurvePoints))
+	{
+		MPlug plug(thisMObject(), aNumCurvePoints);
+		setDependentsDirty(plug, plugArray);
+	}
 	if (!data.isClean(aNormalOffset))
 	{
 		MPlug plug(thisMObject(), aNormalOffset);
@@ -611,6 +652,60 @@ MStatus DLInstancer::dlGetMeshData(const MObject& mesh, DLMeshData& meshData)
 			CHECK_MSTATUS_AND_RETURN_IT(status);
 		}
 	}
+	return MS::kSuccess;
+}
+
+MStatus DLInstancer::dlGenerateReferencePointsOnCurve(MFnNurbsCurve & fnCurve)
+{
+	MStatus status;
+
+	transformData_.referencePoints.clear();
+	transformData_.referenceNormals.clear();
+	transformData_.normalAlignmentMatricies.clear();
+
+
+	double curveLength = fnCurve.length();
+
+	if (numInstances_ == 1)
+	{
+		double param = fnCurve.findParamFromLength(curveLength / 2);
+		MPoint point;
+		MVector normal;
+		status = fnCurve.getPointAtParam(param, point);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+		normal = fnCurve.normal(param, MSpace::kObject, &status);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+
+		status = transformData_.referencePoints.append(point);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+		status = transformData_.referenceNormals.append(normal);
+		CHECK_MSTATUS_AND_RETURN_IT(status);
+	}
+	else
+	{
+		double param;
+		MPoint point;
+		MVector normal;
+		MMatrix alignMatrix;
+		double segmentLength = curveLength / (numInstances_ - 1);
+		for (int i = 0; i < numInstances_; i++)
+		{
+			param = fnCurve.findParamFromLength(segmentLength * i);
+			status = fnCurve.getPointAtParam(param, point);
+			CHECK_MSTATUS_AND_RETURN_IT(status);
+			normal = fnCurve.normal(param, MSpace::kObject, &status);
+			CHECK_MSTATUS_AND_RETURN_IT(status);
+
+			status = transformData_.referencePoints.append(point);
+			CHECK_MSTATUS_AND_RETURN_IT(status);
+			status = transformData_.referenceNormals.append(normal);
+			CHECK_MSTATUS_AND_RETURN_IT(status);
+
+			alignMatrix = dlGenerateNormalAlignmentMatrix(normal);
+			transformData_.normalAlignmentMatricies.append(alignMatrix);
+		}
+	}
+
 	return MS::kSuccess;
 }
 

@@ -7,6 +7,7 @@
 #include <maya/MFnCompoundAttribute.h>
 #include <maya/MFnMatrixAttribute.h>
 #include <maya/MFnMessageAttribute.h>
+#include <maya/MFnGenericAttribute.h>
 #include <maya/MPlug.h>
 #include <maya/MDataBlock.h>
 #include <maya/MPointArray.h>
@@ -28,6 +29,7 @@
 #include <maya/MFloatMatrix.h>
 #include <maya/MString.h>
 #include <maya/MTimer.h>
+#include <maya/MFnNurbsCurve.h>
 
 #include <map>
 #include <vector>
@@ -52,6 +54,8 @@ public:
 
 	MStatus dlGetMeshData(const MObject& mesh, DLMeshData& meshData);
 
+	MStatus dlGenerateReferencePointsOnCurve(MFnNurbsCurve& fnCurve);
+
 	MStatus dlCreateOutputMeshData(const DLMeshData& inMeshData, unsigned int numCopies,
 								DLMeshData& outMeshData, bool clearData = true);
 
@@ -65,7 +69,7 @@ public:
 
 
 	enum attrs
-	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms, kAlignment, kTransMatrix, kMessage};
+	{ kInstanceMesh, kReferenceMesh, kOffsets, kRandoms, kAlignment, kTransMatrix, kMessage, kNumCurvePoints};
 
 	//Name and ID
 	static MTypeId id;
@@ -83,6 +87,7 @@ public:
 	static MObject aReferenceMatrix;
 
 	static MObject aAlignToNormals;
+	static MObject aNumCurvePoints;
 
 	static MObject aNormalOffset;
 	static MObject aTranslate;
