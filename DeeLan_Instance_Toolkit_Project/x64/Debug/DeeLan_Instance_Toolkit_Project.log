@@ -1,8 +1,3 @@
 ﻿  DLInstancer.cpp
-d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(746): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(747): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(748): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(752): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-d:\deelaninstancetoolkit\deelan_instance_toolkit_project\dlinstancer.cpp(738): warning C4101: 'param': unreferenced local variable
   DeeLan_Instance_Toolkit_Project.vcxproj -> D:\DeeLanInstanceToolkit\DeeLan_Instance_Toolkit_Project\x64\Debug\DeeLan_Instance_Toolkit_Project.mll
   DeeLan_Instance_Toolkit_Project.vcxproj -> D:\DeeLanInstanceToolkit\DeeLan_Instance_Toolkit_Project\x64\Debug\DeeLan_Instance_Toolkit_Project.pdb (Partial PDB)

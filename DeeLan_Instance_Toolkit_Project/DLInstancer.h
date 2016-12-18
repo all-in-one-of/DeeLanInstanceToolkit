@@ -89,6 +89,8 @@ public:
 
 	static MObject aAlignToNormals;
 	static MObject aLockYAlignment;
+	static MObject aFillEntireCurve;
+
 
 	static MObject aNumCurvePoints;
 	static MObject aCurveParamOffset;
@@ -129,5 +131,6 @@ private:
 	std::map<attrs, bool> attributeDirty_;
 	MTime prevTime_;
 	bool setDependentsDirtyCalled_;
+	bool fillEntireCurve_;
 };
 

@@ -17,6 +17,7 @@ MObject DLInstancer::aReferenceMatrix;
 
 MObject DLInstancer::aAlignToNormals;
 MObject DLInstancer::aLockYAlignment;
+MObject DLInstancer::aFillEntireCurve;
 
 MObject DLInstancer::aNumCurvePoints;
 MObject DLInstancer::aCurveParamOffset;
@@ -43,7 +44,7 @@ MObject DLInstancer::aGeneratedMesh;
 MObject DLInstancer::aOutMesh;
 
 
-DLInstancer::DLInstancer() : updateMaterials_(false)
+DLInstancer::DLInstancer() : updateMaterials_(false) , setDependentsDirtyCalled_(false), fillEntireCurve_(false)
 {
 	transformData_.scaleOffset = { 1.0, 1.0, 1.0 };
 }
@@ -139,6 +140,10 @@ MStatus DLInstancer::initialize()
 	addAttribute(aLockYAlignment);
 	attributeAffects(aLockYAlignment, aOutMesh);
 
+	aFillEntireCurve = nAttr.create("fillEntireCurve", "fillCurve", MFnNumericData::kBoolean, false);
+	nAttr.setKeyable(true);
+	addAttribute(aFillEntireCurve);
+	attributeAffects(aFillEntireCurve, aOutMesh);
 
 
 	aNumCurvePoints = nAttr.create("numCurveReferencePoints", "numCurvePts", MFnNumericData::kInt, 3);
@@ -246,7 +251,7 @@ MStatus DLInstancer::setDependentsDirty(const MPlug &plug, MPlugArray &plugArray
 	{
 		attributeDirty_[kInstanceMesh] = true;
 	}
-	else if (plug == aReferenceMesh || plug == aNumCurvePoints || 
+	else if (plug == aReferenceMesh || plug == aFillEntireCurve || plug == aNumCurvePoints || 
 		plug == aCurveParamOffset || plug == aCurveParamRandom || plug == aCurveParamSeed)
 	{
 		attributeDirty_[kReferenceMesh] = true;
@@ -375,6 +380,8 @@ MStatus DLInstancer::compute(const MPlug& plug, MDataBlock& data)
 		else if (referenceObjectHandle.type() == MFnData::kNurbsCurve)
 		{
 			//MGlobal::displayInfo("kNurbsCurve"); //DEBUGGING
+			fillEntireCurve_ = data.inputValue(aFillEntireCurve, &status).asBool();
+
 			float paramOffset = data.inputValue(aCurveParamOffset, &status).asFloat();
 			CHECK_MSTATUS_AND_RETURN_IT(status);
 			float paramRandom = data.inputValue(aCurveParamRandom, &status).asFloat();
@@ -725,6 +732,7 @@ MStatus DLInstancer::dlGenerateReferencePointsOnCurve(MFnNurbsCurve & fnCurve, f
 		CHECK_MSTATUS_AND_RETURN_IT(status);
 		normal = fnCurve.normal(param, MSpace::kObject, &status);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
+		
 
 		status = transformData_.referencePoints.append(point);
 		CHECK_MSTATUS_AND_RETURN_IT(status);
@@ -739,26 +747,51 @@ MStatus DLInstancer::dlGenerateReferencePointsOnCurve(MFnNurbsCurve & fnCurve, f
 		MPoint point;
 		MVector normal;
 		MMatrix alignMatrix;
-		double segmentLength = curveLength / (numInstances_ - 1);
+		double segmentLength;
+
+		if (fnCurve.form() == MFnNurbsCurve::kClosed || !fillEntireCurve_)
+		{
+			segmentLength = curveLength / numInstances_;
+		}
+		else
+		{
+			segmentLength = curveLength / (numInstances_ - 1);
+		}
+		
 		for (unsigned int i = 0; i < numInstances_; i++)
 		{
-			float randomOffset = DLCommon::dlGenerateRandomValues((paramSeed + i), paramRandom, DLCommon::kCurveParam);
-			float lenOnCurve = (segmentLength * i) + ((paramOffset + paramRandom) * curveLength);
-			float maxLenOnCurve = curveLength + ((paramOffset + paramRandom) * curveLength);
-			float modulusLen = std::fmod(maxLenOnCurve, curveLength);
-			float normalizedLenOnCurve;
-			if (modulusLen == 0.0)
-			{
-				normalizedLenOnCurve = (lenOnCurve / (maxLenOnCurve / curveLength)) * curveLength;
-			}
-			double param = fnCurve.findParamFromLength(normalizedLenOnCurve);
-			//double param = (curParam / (maxParam * paramOffset)) * maxParam;
-			//param = fnCurve.findParamFromLength(segmentLength * i);
+			double randomOffset = DLCommon::dlGenerateRandomValues((paramSeed + i), paramRandom, DLCommon::kCurveParam);
+			double lenOnCurve = (segmentLength * i) + ((paramOffset + randomOffset) * curveLength);
+			double modulusLen = std::fmod(lenOnCurve, curveLength);
 
-			status = fnCurve.getPointAtParam(param, point);
-			CHECK_MSTATUS_AND_RETURN_IT(status);
-			normal = fnCurve.normal(param, MSpace::kObject, &status);
-			CHECK_MSTATUS_AND_RETURN_IT(status);
+			if (fillEntireCurve_ && randomOffset == 0.0 && i == (numInstances_ - 1))
+			{
+				if (std::fmod(paramOffset, (1.0 / (numInstances_ - 1))) == 0.0)
+				{
+					status = fnCurve.getPointAtParam(maxParam, point);
+					CHECK_MSTATUS_AND_RETURN_IT(status);
+					normal = fnCurve.normal(maxParam, MSpace::kObject, &status);
+					CHECK_MSTATUS_AND_RETURN_IT(status);
+				}
+				else
+				{
+					continue;
+				}
+			}
+			else
+			{
+				param = fnCurve.findParamFromLength(modulusLen);
+
+				status = fnCurve.getPointAtParam(param, point);
+				CHECK_MSTATUS_AND_RETURN_IT(status);
+				normal = fnCurve.normal(param, MSpace::kObject, &status);
+				CHECK_MSTATUS_AND_RETURN_IT(status);
+			}
+			
+		
+			MString tempString;
+			tempString = param;
+			MGlobal::displayInfo(tempString);
 
 			status = transformData_.referencePoints.append(point);
 			CHECK_MSTATUS_AND_RETURN_IT(status);
@@ -767,10 +800,6 @@ MStatus DLInstancer::dlGenerateReferencePointsOnCurve(MFnNurbsCurve & fnCurve, f
 
 			alignMatrix = dlGenerateNormalAlignmentMatrix(normal);
 			transformData_.normalAlignmentMatricies.append(alignMatrix);
-
-			MString tempString;
-			tempString = param;
-			MGlobal::displayInfo(tempString);
 		}
 	}
 
